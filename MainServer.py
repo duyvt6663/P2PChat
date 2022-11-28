@@ -7,9 +7,10 @@ import threading
 from threading import Thread
 # import serializer
 from Deserializer import ClientSchema, SignUpSchema, LoginAuthenSchema, ReqTag
-from utils import hashmap, getFriends
+from utils import hashmap, getFriends, writeToStorage
+from Synchronization import ReadWriteLock
 
-print_lock = threading.Lock()
+lock = ReadWriteLock()
 clients = {}
 
 # peer handling function
@@ -28,7 +29,13 @@ def peerConnection(conn,addr):
         else: # sign up validation
             SignUpSchema().load(data)
             # add to hashmap
+            hashmap[client['username']] = len(hashmap)
             # add to Users.json
+            writeToStorage({
+                'nickname': client['nickname'],
+                'username': client['username'],
+                'password': client['password']
+            },lock)
             msg = {'type': 'SIGNUP',
                    'message': 'SUCCESS'}
             conn.send(json.dumps(msg)) # notify success
@@ -82,8 +89,6 @@ if __name__ == '__main__':
         # establish connection with client
         conn, addr = server.accept()
 
-        # lock acquired by client
-        print_lock.acquire()
         print('Connected to :', addr[0], ':', addr[1])
 
         # Start a new thread and return its identifier

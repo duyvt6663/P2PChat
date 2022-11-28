@@ -23,6 +23,7 @@ class ClientSchema(Schema):
                          ReqTag.SIGNUP]:
             raise ValidationError('Please login or signup')
 class SignUpSchema(ClientSchema):
+    nickname = fields.Str(required=True)
     @validates("username")
     def validateSignup(self,value):
         if value in hashmap:
