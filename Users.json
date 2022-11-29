@@ -1,14 +1,28 @@
 [
-  {
-    "nickname": "BolsevikDUm",
-    "username": "KinkSplaster69",
-    "password": "nunezYolokSi2",
-    "friends": [2]
-  },
-  {
-    "nickname": "Numjuku33",
-    "username": "LobsterChan323",
-    "password": "barusushimi",
-    "friends": [1]
-  }
+    {
+        "nickname": "BolsevikDUm",
+        "username": "KinkSplaster69",
+        "password": "nunezYolokSi2",
+        "friends": [
+            1
+        ]
+    },
+    {
+        "nickname": "Numjuku33",
+        "username": "LobsterChan323",
+        "password": "barusushimi",
+        "friends": [
+            0
+        ]
+    },
+    {
+        "nickname": "DucattiMEme32",
+        "username": "ChinsuFood0",
+        "password": "VlovvvKoha0920"
+    },
+    {
+        "nickname": "Dumamay",
+        "username": "KinkSplaser69",
+        "password": "nunezYolokSi2"
+    }
 ]

@@ -1,21 +1,21 @@
 import json
 from Synchronization import  ReadWriteLock
-hashmap = {
-    "KinkSplaster69": 0,
-    "LobsterChan323": 1
-}
 
 #def updateHashMap(username):
 
-def getFriends(username, clients):
+def getFriends(username, clients,lock):
+    lock.acquire_read()
+    with open('HMap.json', 'r') as openfile:
+        hashmap = json.load(openfile)
     id = hashmap[username]
     with open('Users.json', 'r') as openfile:
         users = json.load(openfile)
+    lock.release_read()
     res = []
     for i in users[id]['friends']:
         res.append({'id': i,
                     'nickname': users[i]['nickname'],
-                    'status': hashmap[username] in clients})
+                    'status': 'ONLINE' if hashmap[username] in clients else 'OFFLINE'})
     return res
 
 def writeToStorage(new_data, lock, filename='Users.json'):
