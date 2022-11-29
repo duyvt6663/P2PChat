@@ -6,12 +6,42 @@ from _thread import *
 import threading
 from threading import Thread
 # import serializer
-from Deserializer import ClientSchema, SignUpSchema, LoginAuthenSchema, ReqTag
+from Deserializer import RequestSchema, ClientSchema, SignUpSchema, \
+    LoginAuthenSchema, SessionSchema, ReqTag, RepTag
 from utils import hashmap, getFriends, writeToStorage
 from Synchronization import ReadWriteLock
 
 lock = ReadWriteLock()
-clients = {}
+clients = {} # an ID can have multiple instances, e.g 1 : [conn1, conn2]
+sessions = [] # online users
+
+# broadcast status of a friend
+def updateStatus(id, type=RepTag.ONLINE):
+    lock.acquire_read()
+    with open('Users.json', 'r') as openfile:
+        users = json.load(openfile)
+    lock.release_read()
+    for friend in users[id]['friends']:
+        if friend in clients:
+            for conn in clients[friend]:
+                conn.send(json.dumps({'type': type,
+                                      'friend': id}))
+
+# create session
+def createSession(addr,srcID,destID):
+    if destID not in clients: # user not online
+        raise Exception('friend not online')
+    # add session if not exist
+    if (srcID,destID) not in sessions and \
+       (destID,srcID) not in sessions:
+        sessions.append((srcID,destID))
+    for conn in clients[destID]:
+        conn.send(json.dumps({
+            'type': ReqTag.SESSION_OPEN,
+            'id': srcID,
+            'ip': addr[0],
+            'port': addr[1]
+        }))
 
 # peer handling function
 def peerConnection(conn,addr):
@@ -20,12 +50,11 @@ def peerConnection(conn,addr):
         client = ClientSchema().load(data)
         # connection set
         if client['type'] == ReqTag.LOGIN:
-            # login authenication
+            # login authentication
             LoginAuthenSchema().load(data)
             friendlist = getFriends(client['username'], clients)
-            conn.send(json.dumps({'type':'LOGIN',
-                                  'message':'SUCCESS'}))
-            conn.send(json.dumps(friendlist))  # send back friendlist
+            conn.send(json.dumps({'type': RepTag.LOGIN_SUCCESS,
+                                  'friendlist':friendlist})) # send back friendlist
         else: # sign up validation
             SignUpSchema().load(data)
             # add to hashmap
@@ -36,37 +65,39 @@ def peerConnection(conn,addr):
                 'username': client['username'],
                 'password': client['password']
             },lock)
-            msg = {'type': 'SIGNUP',
-                   'message': 'SUCCESS'}
+            msg = {'type': RepTag.SIGNUP_SUCCESS,
+                   'friendlist':[]}
             conn.send(json.dumps(msg)) # notify success
 
         # add id to client list; can log in multiple instances simultaneously
         id = hashmap[client['username']]
-        if id not in clients:
-            clients[id] = conn
+        clients[id].append(conn)
 
         # broadcast online status to online friends
-        with open('Users.json', 'r') as openfile:
-            users = json.load(openfile)
-        for friend in users[id]['friends']:
-            if friend in clients:
-                conn.send(json.dumps({'type': 'ONLINE',
-                                      'friend': id}))
+        updateStatus(id)
+
     except Exception as e:
         conn.send(json.dumps({"type": "ERROR",
                               "message": {e.message}}))
         print('Connection closed with :', addr[0], ':', addr[1])
         conn.close()
+        return
 
     # wait for session or disconnect
     while True:
         try:
             data = json.loads(conn.recv(1024))
-            req = someclass().load(data)
+            req = RequestSchema().load(data)
             if req['type'] == ReqTag.SESSION_OPEN:
+                destID = SessionSchema().load(data)['destID']
+                createSession(addr,id,destID)
             elif req['type'] == ReqTag.SESSION_REJECT:
+
             elif req['type'] == ReqTag.SESSION_ACCEPT:
+
             elif req['type'] == ReqTag.LOGOUT:
+
+        except Exception as e:
 
     # connection closed
     conn.close()

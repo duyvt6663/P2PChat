@@ -1,18 +1,31 @@
 import json
 from enum import Enum
-from marshmallow import Schema, fields, validates, validates_schema, ValidationError
+from marshmallow import Schema, fields, validates, validates_schema, ValidationError, validate
 from marshmallow_enum import EnumField
 from utils import hashmap
 import pickle
 
-
+class RepTag(Enum): # reply tag
+    LOGIN_SUCCESS = 'IN'
+    SIGNUP_SUCCESS = 'SIN'
+    ONLINE = 'ONLINE'
+    OFFLINE = 'OFFLINE'
 class ReqTag(Enum): # request tag
     LOGIN = 'LOGIN'
     SIGNUP = 'SIGNUP'
     SESSION_OPEN = 'SOP'
     SESSION_CLOSE = 'SCL'
+class RequestSchema(Schema):
+    type = EnumField(ReqTag, by_value=True)
+    class Meta:
+        strict = True
+    @validates("type")
+    def validateType(self, value):
+        if value not in [ReqTag.SESSION_OPEN,
+                         ReqTag.SESSION_CLOSE]:
+            raise ValidationError('Wrong request type')
 class ClientSchema(Schema):
-    type = EnumField(ReqTag)
+    type = EnumField(ReqTag,by_value=True)
     username = fields.Str(required=True)
     password = fields.Str(required=True)
     class Meta:
@@ -38,6 +51,10 @@ class LoginAuthenSchema(ClientSchema):
         if users[hashmap[data['username']]]['password'] != data['password']:
             raise ValidationError('Wrong password')
 
-class SessionSchema(Schema):
+class SessionSchema(RequestSchema):
+    destID = fields.Int(required=True)
 
-class
+input = '{"type":"SCL","Musiala":"HappyDIno"}'
+RequestSchema().load(json.loads(input))
+input = '{"type":"SIGNU","username":"HappyDIno"}'
+ClientSchema().load(json.loads(input))
