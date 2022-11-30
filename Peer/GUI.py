@@ -24,7 +24,8 @@ class GUI:
     FRIENDS_LIST = 'FRIENDS_LIST'
     FILE_TRANSFER = 'FILE_TRANSFER'
     MESSAGE = 'MESSAGE'
-    path = 'D:\\assignment2\\comp_net_assignment_1-master\\recv_file'
+    
+    #path = 'D:\\assignment2\\comp_net_assignment_1-master\\recv_file'
 
     def __init__(self, master):
         self.root = master
@@ -45,11 +46,12 @@ class GUI:
         self.init_socket()
         self.init_gui()
         self.peers = {}
+        self.friends = []
 
     def createSocket(self):
         try:
             so = socket(AF_INET, SOCK_STREAM)
-            ip = HOST
+            ip = '127.0.0.1'
             port = random.randint(10000, 49151)
             so.bind((ip,port))
             return so, (ip, port)
@@ -90,48 +92,6 @@ class GUI:
         self.login_but.pack(anchor='center')
         self.signup_but.pack(anchor='nw')
 
-    def log_in(self):
-        if len(self.username.get()) == 0:
-            messagebox.showerror('Message', "Please enter username")
-            return
-        if len(self.password.get()) == 0:
-            messagebox.showerror('Message', "Please enter password")
-            return
-        self.username.config(state='disabled')
-        self.password.config(state='disabled')
-        time.sleep(0.1)
-        msg = (self.LOGIN, (self.username.get(), self.password.get()))
-        self.sendMessage(self.serverSocket, msg)
-        time.sleep(0.1)
-        msg = (HOST, PORT)
-        self.sendMessage(self.serverSocket, msg)
-
-        header = None
-        while header != self.LOGIN:
-            header, (reply,) = pickle.loads(self.serverSocket.recv(1024))
-
-        if reply == 'SUCCESS':
-            frlist_dumps = b''
-            while True:
-                income = self.serverSocket.recv(1024)
-                frlist_dumps += income
-                if len(income) < 1024:
-                    break
-            header, args = pickle.loads(frlist_dumps)
-            self.friend_list = args[0]
-            self.hide_frame()
-            self.display_logout_but()
-            self.display_friend_box()
-            self.display_chat_box()
-            self.display_chat_entry_box()
-            thread = threading.Thread(target=self.receive_message_from_server, daemon=True)
-            thread.start()
-
-        elif reply == 'FAIL':
-            messagebox.showinfo('Message', 'Username or password is invalid')
-            self.username.config(state='normal')
-            self.password.config(state='normal')
-
     def signup_ui(self):
         self.hide_frame()
         self.reset_frame()
@@ -155,42 +115,8 @@ class GUI:
         self.signup_but.pack(anchor='center')
         self.login_but.pack(anchor='nw')
 
-    def sign_up(self):
-        if len(self.username.get()) == 0:
-            messagebox.showerror('Message', "Please enter username")
-            return
-        if len(self.password.get()) == 0:
-            messagebox.showerror('Message', "Please enter password")
-            return
-        if len(self.repassword.get()) == 0:
-            messagebox.showerror('Message', "Please enter re-password")
-            return
-        if self.password.get() != self.repassword.get():
-            messagebox.showerror('Message', 'Password don\'t match')
-            return
-        self.username.config(state='disabled')
-        self.password.config(state='disabled')
-        self.repassword.config(state='disabled')
-        time.sleep(0.1)
-
-        msg = (self.SIGNUP, (self.username.get(), self.password.get()))
-        self.sendMessage(self.serverSocket, msg)
-
-        header = None
-        while header != self.SIGNUP:
-            header, (reply, _) = pickle.loads(self.serverSocket.recv(1024))
-        if reply == 'SUCCESS':
-            messagebox.showinfo('Message', 'Sign up successful!')
-        elif reply == 'FAIL':
-            messagebox.showinfo('Message', 'Username has in used')
-        self.username.config(state='normal')
-        self.password.config(state='normal')
-        self.repassword.config(state='normal')
-
-    def log_out(self):
-        msg = (self.LOGOUT, (self.username.get(),))
-        self.sendMessage(self.serverSocket, msg)
-        self.login_ui()
+    # ------------------------- GUI --------------------------
+    # 
 
     def request_session(self):
         username = self.targets.get()
