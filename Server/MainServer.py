@@ -33,18 +33,18 @@ def updateStatus(id, type=RepTag.ONLINE):
                                       'friend': id}).encode('utf-8'))
 
 # broadcast status of a session
-def updateSession(srcID, destID, tag='COMPLETELY'):
+def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
     lock.acquire_read()
     with open('Users.json', 'r') as file:
         users = json.load(file)
     lock.release_read()
     clients[srcID].send(json.dumps({
-        'type': ReqTag.SESSION_CLOSE,
+        'type': type,
         'with': users[destID]['nickname'],
         'status': tag
     }).encode('utf-8'))
     clients[destID].send(json.dumps({
-        'type': ReqTag.SESSION_CLOSE,
+        'type': type,
         'with': users[srcID]['nickname'],
         'status': tag
     }).encode('utf-8'))
@@ -56,7 +56,9 @@ def createSession(addr,srcID,destID,tag=ReqTag.SESSION_OPEN):
     # add session if not exist
     if (srcID,destID) not in sessions and \
        (destID,srcID) not in sessions:
-        sessions[(srcID,destID)] = 1 # one user waiting on session
+        sessions[(srcID,destID)] = 0 # set new session
+    # increment the current session seed
+    incrementSession(srcID,destID)
     # session already exists
     for conn in clients[destID]:
         conn.send(json.dumps({
@@ -75,13 +77,14 @@ def incrementSession(srcID, destID, unit=1):
     else:
         return
     sessions[ind] += unit
-    if not sessions[ind]:
-        # destroy session
-        sessions.pop(ind)
-        tag = 'COMPLETELY'
-    else:
-        tag = 'PARTIALLY'
-    updateSession(srcID,destID,tag)
+    if unit < 0:
+        if not sessions[ind]:
+            # destroy session
+            sessions.pop(ind)
+            tag = 'COMPLETELY'
+        else:
+            tag = 'PARTIALLY'
+        updateSession(srcID,destID,tag)
 
 # signup util function
 def signup(conn, client):
@@ -125,7 +128,7 @@ def disconnect(conn, id):
     if not len(clients[id]):
         clients.pop(id)
     updateStatus(id, RepTag.OFFLINE)
-    # reset connection and id
+    # reset id
     id = -1
 
 
