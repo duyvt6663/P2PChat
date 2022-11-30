@@ -16,7 +16,7 @@ from Synchronization import ReadWriteLock
 lock = ReadWriteLock()
 clients = {} # online users, an ID can have multiple connection instances, e.g 1 : [conn1, conn2]
 sessions = {} # current online chats
-with open('HMap.json', 'r') as file:
+with open('./Server/HMap.json', 'r') as file:
     hashmap = json.load(file)
 ###################################################################
 
