@@ -14,8 +14,8 @@ from Synchronization import ReadWriteLock
 ###################################################################
 ### Global asset, including lock, online users, and sessions
 lock = ReadWriteLock()
-clients = {} # an ID can have multiple instances, e.g 1 : [conn1, conn2]
-sessions = {} # online users
+clients = {} # online users, an ID can have multiple connectionn instances, e.g 1 : [conn1, conn2]
+sessions = {} # current online chats
 with open('HMap.json', 'r') as file:
     hashmap = json.load(file)
 ###################################################################
