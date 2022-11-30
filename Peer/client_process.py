@@ -8,7 +8,7 @@ from tkinter import *
 from tkinter import messagebox
 import json, pickle
 from Server.Synchronization import  ReadWriteLock
-from utils import getFriends, writeToStorage
+from Server.utils import getFriends, writeToStorage
 
 lock = ReadWriteLock()
 #online_peers = {}
