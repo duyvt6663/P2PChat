@@ -7,7 +7,7 @@ import threading
 from threading import Thread
 # import serializer
 from Deserializer import RequestSchema, ClientSchema, SignUpSchema, \
-    LoginAuthenSchema, SessionSchema, ReqTag, RepTag, hashmap
+    LoginAuthenSchema, SessionSchema, ReqTag, RepTag
 from utils import getFriends, writeToStorage
 from Synchronization import ReadWriteLock
 
@@ -16,7 +16,8 @@ from Synchronization import ReadWriteLock
 lock = ReadWriteLock()
 clients = {} # an ID can have multiple instances, e.g 1 : [conn1, conn2]
 sessions = {} # online users
-
+with open('HMap.json', 'r') as file:
+    hashmap = json.load(file)
 ###################################################################
 
 # broadcast status of a friend
@@ -28,25 +29,25 @@ def updateStatus(id, type=RepTag.ONLINE):
     for friend in users[id]['friends']:
         if friend in clients: # friend is online
             for conn in clients[friend]: # all instances of a friend
-                conn.send(pickle.dumps({'type': type,
-                                      'friend': id}))
+                conn.send(json.dumps({'type': type,
+                                      'friend': id}).encode('utf-8'))
 
 # broadcast status of a session
 def updateSession(srcID, destID, tag='COMPLETELY'):
     lock.acquire_read()
-    with open('Users.json','r') as file:
+    with open('Users.json', 'r') as file:
         users = json.load(file)
     lock.release_read()
-    clients[srcID].send(pickle.dumps({
+    clients[srcID].send(json.dumps({
         'type': ReqTag.SESSION_CLOSE,
         'with': users[destID]['nickname'],
         'status': tag
-    }))
-    clients[destID].send(pickle.dumps({
+    }).encode('utf-8'))
+    clients[destID].send(json.dumps({
         'type': ReqTag.SESSION_CLOSE,
         'with': users[srcID]['nickname'],
         'status': tag
-    }))
+    }).encode('utf-8'))
 
 # create session
 def createSession(addr,srcID,destID,tag=ReqTag.SESSION_OPEN):
@@ -58,12 +59,12 @@ def createSession(addr,srcID,destID,tag=ReqTag.SESSION_OPEN):
         sessions[(srcID,destID)] = 1 # one user waiting on session
     # session already exists
     for conn in clients[destID]:
-        conn.send(pickle.dumps({
+        conn.send(json.dumps({
             'type': tag,
             'id': srcID,
             'ip': addr[0],
             'port': addr[1]
-        }))
+        }).encode('utf-8'))
 
 # add/subtract user from session
 def incrementSession(srcID, destID, unit=1):
@@ -86,6 +87,11 @@ def incrementSession(srcID, destID, unit=1):
 def signup(conn, client):
     # add to hashmap
     hashmap[client['username']] = len(hashmap)
+    # write hashmap back to file
+    lock.acquire_write()
+    with open('HMap.json', 'w') as file:
+        json.dump(hashmap, file, indent=4)
+    lock.release_write()
     # add to Users.json
     writeToStorage({
         'nickname': client['nickname'],
@@ -94,7 +100,7 @@ def signup(conn, client):
     }, lock)
     msg = {'type': RepTag.SIGNUP_SUCCESS,
            'friendlist': []}
-    conn.send(pickle.dumps(msg))  # notify success
+    conn.send(json.dumps(msg).encode('utf-8'))  # notify success
 
 # post signup/login update
 def updateUser(data,id):
@@ -107,13 +113,9 @@ def updateUser(data,id):
     updateStatus(id)
 
 # disconnect util function
-def disconnect(conn, id, msg = 'SUCCESS'):
+def disconnect(conn, id):
+    # exception-free section -> no send
     if id == -1: # no login, signup etc.
-        conn.send(pickle.dumps({
-            'type': ReqTag.DISCONNECT,
-            'message': 'SUCCESS'
-        }))
-        conn.close()
         return
     # id valid, close related sessions
     for i in range(len(hashmap)):
@@ -125,16 +127,7 @@ def disconnect(conn, id, msg = 'SUCCESS'):
     updateStatus(id, RepTag.OFFLINE)
     # reset connection and id
     id = -1
-    conn.send(pickle.dumps({
-        'type': ReqTag.DISCONNECT,
-        'message': msg
-    }))
-    conn.close()
-    # write hashmap back to file
-    lock.acquire_write()
-    with open('HMap.json','w') as file:
-        json.dump(hashmap,file,indent=4)
-    lock.release_write()
+
 
 # peer handling function
 def peerConnection(conn,addr):
@@ -143,7 +136,7 @@ def peerConnection(conn,addr):
     while True:
         try:
             data = conn.recv(1024)
-            data = pickle.loads(data)
+            data = json.loads(data.decode('utf-8'))
         except Exception as e:
             disconnect(conn, id, repr(e))
             print(f'Disconnected to: ',addr[0], ':', str(addr[1]))
@@ -151,15 +144,19 @@ def peerConnection(conn,addr):
         try:
             if data['type'] == ReqTag.LOGIN:
                 # login authentication
+                lock.acquire_read()
                 LoginAuthenSchema().load(data)
+                lock.release_read()
                 friendlist = getFriends(data['username'], clients, lock)
-                conn.send(pickle.dumps({
+                conn.send(json.dumps({
                     'type': RepTag.LOGIN_SUCCESS,
                     'friendlist': friendlist
-                }))  # send back friendlist
+                }).encode('utf-8'))  # send back friendlist
                 updateUser(data,id)
             elif data['type'] == ReqTag.SIGNUP:
+                lock.acquire_read()
                 SignUpSchema().load(data)
+                lock.release_read()
                 signup(conn, data)
                 updateUser(data,id)
             elif data['type'] == ReqTag.SESSION_OPEN:
@@ -167,7 +164,7 @@ def peerConnection(conn,addr):
                 createSession(addr,id,destID)
             elif data['type'] == ReqTag.SESSION_REJECT:
                 destID = SessionSchema().load(data)['destID']
-                conn.send(pickle.dumps(data))
+                conn.send(json.dumps(data).encode('utf-8'))
                 updateSession(id,destID)
                 # pop session
                 sessions.pop((destID,id))
@@ -185,14 +182,18 @@ def peerConnection(conn,addr):
             else: # disconnect or gibberish data
                 # request close all related sessions and update status
                 disconnect(conn, id)
+                conn.close()
                 print(f'Disconnected to: ', addr[0], ':', str(addr[1]))
                 return
 
         except Exception as e:
-            conn.send(pickle.dumps(
-                {"type": "ERROR",
-                "message": repr(e)}
-            ))
+            try:
+                conn.send(json.dumps(
+                    {"type": "ERROR",
+                    "message": repr(e)}
+                ).encode('utf-8'))
+            except Exception:
+                continue
 
     # connection closed
     conn.close()

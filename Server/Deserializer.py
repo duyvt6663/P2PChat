@@ -5,8 +5,6 @@ from marshmallow_enum import EnumField
 import pickle
 
 
-with open('HMap.json','r') as file:
-    hashmap = json.load(file)
 class RepTag(str,Enum): # reply tag
     LOGIN_SUCCESS = 'LSS'
     SIGNUP_SUCCESS = 'SSS'
@@ -41,11 +39,15 @@ class SignUpSchema(ClientSchema):
     nickname = fields.Str(required=True)
     @validates("username")
     def validateSignup(self,value):
+        with open('HMap.json', 'r') as file:
+            hashmap = json.load(file)
         if value in hashmap:
             raise ValidationError('Username already in use')
 class LoginAuthenSchema(ClientSchema):
     @validates_schema
     def authen(self, data, **kwargs):
+        with open('HMap.json', 'r') as file:
+            hashmap = json.load(file)
         if data['username'] not in hashmap:
             raise ValidationError('Wrong username')
         with open("Users.json") as openfile:
