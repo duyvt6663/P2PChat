@@ -7,10 +7,11 @@ import random
 from os import listdir
 from tkinter import *
 from tkinter import messagebox
+from GUI import GUI
 
 
 if __name__ == '__main__':
-    thread = threading.Thread(target=run_client, daemon = True)
+    thread = threading.Thread(target=run_server, daemon=True)
     thread.start()
     time.sleep(0.1)
     root = Tk()
