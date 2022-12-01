@@ -9,6 +9,8 @@ from tkinter import *
 from tkinter import messagebox
 from GUI import GUI
 
+from GUI import *
+
 
 if __name__ == '__main__':
     thread = threading.Thread(target=run_server, daemon=True)

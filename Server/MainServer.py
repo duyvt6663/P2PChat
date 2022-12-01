@@ -23,7 +23,7 @@ with open('./Server/HMap.json', 'r') as file:
 # broadcast status of a friend
 def updateStatus(id, type=RepTag.ONLINE):
     lock.acquire_read()
-    with open('Users.json', 'r') as openfile:
+    with open('./Server/Users.json', 'r') as openfile:
         users = json.load(openfile)
     lock.release_read()
     for friend in users[id]['friends']:
@@ -35,7 +35,7 @@ def updateStatus(id, type=RepTag.ONLINE):
 # broadcast status of a session
 def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
     lock.acquire_read()
-    with open('Users.json', 'r') as file:
+    with open('./Server/Users.json', 'r') as file:
         users = json.load(file)
     lock.release_read()
     clients[srcID].send(json.dumps({
@@ -92,7 +92,7 @@ def signup(conn, client):
     hashmap[client['username']] = len(hashmap)
     # write hashmap back to file
     lock.acquire_write()
-    with open('HMap.json', 'w') as file:
+    with open('./Server/HMap.json', 'w') as file:
         json.dump(hashmap, file, indent=4)
     lock.release_write()
     # add to Users.json
