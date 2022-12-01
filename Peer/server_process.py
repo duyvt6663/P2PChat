@@ -9,20 +9,21 @@ from tkinter import *
 from tkinter import messagebox
 
 
-HOST = '127.0.0.1'
-PORT = random.randint(1024, 49151)
-
 class ServerProcess:
-    serverSocket = None
+    HOST = '127.0.0.1'
+    PORT = random.randint(1024, 49151)
+    server = None
     def __init__(self):
-        self.serverSocket = socket(AF_INET, SOCK_STREAM)
-        self.serverSocket.bind((HOST, PORT))
-        self.serverSocket.listen(10)
+        self.server = socket(AF_INET, SOCK_STREAM)
+        self.server.bind((self.HOST, self.PORT))
+        self.server.listen(10)
         print("Connecting...")
-        self.peerASocket, addrA = self.serverSocket.accept()
+        self.peerASocket, addrA = self.server.accept()
         while True:
-            conn, addr = self.serverSocket.accept()
-            print('Connected ' + str(addr))
+            conn, addr = self.server.accept()
+            # check if session already exists: client B -> server A, client A -> server B
+            #conn.close()
+            print('Connected to: ', str(addr[0]), ': ', str(addr[1]))
             t = threading.Thread(target=self.receive_messages_in_a_new_thread, args = (conn,), daemon = True)
             t.start()
     def receive_messages_in_a_new_thread(self, conn):

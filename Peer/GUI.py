@@ -7,7 +7,7 @@ import random
 from os import listdir
 from tkinter import *
 from tkinter import messagebox
-
+import server_process
 
 class GUI:
     serverSocket = None
@@ -47,6 +47,8 @@ class GUI:
         self.init_gui()
         self.peers = {}
         self.friends = []
+        self.server = threading.Thread()
+        self.server.start()
 
     def createSocket(self):
         try:
@@ -91,6 +93,15 @@ class GUI:
         self.passframe.pack(anchor='nw')
         self.login_but.pack(anchor='center')
         self.signup_but.pack(anchor='nw')
+
+    def login(self):
+        loginmsg = {}
+        t = thread(target = client.loginThread,)
+
+    def loginThread():
+        send(package(msg) ->json) -> server
+        recv(friendlist)
+        save(friendlist)
 
     def signup_ui(self):
         self.hide_frame()
@@ -331,6 +342,7 @@ class GUI:
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.root.destroy()
             self.serverSocket.close()
+            self.server.close()
             exit(0)
 
     def hide_frame(self):

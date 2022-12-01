@@ -25,7 +25,7 @@ class RequestSchema(Schema):
     type = EnumField(ReqTag, by_value=True)
 
 class ClientSchema(Schema):
-    type = EnumField(ReqTag,by_value=True)
+    type = EnumField(ReqTag, by_value=True)
     username = fields.Str(required=True)
     password = fields.Str(required=True)
     class Meta:

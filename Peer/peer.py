@@ -2,20 +2,14 @@
 from socket import *
 import pickle
 import time
-import threading
+from threading import Thread
 import random
-from os import listdir
 from tkinter import *
-from tkinter import messagebox
+from os import listdir
 from GUI import GUI
-
-from GUI import *
-
+from server_process import ServerProcess
 
 if __name__ == '__main__':
-    thread = threading.Thread(target=run_server, daemon=True)
-    thread.start()
-    time.sleep(0.1)
     root = Tk()
     gui = GUI(root)
     root.protocol("WM_DELETE_WINDOW", gui.on_close_window)
