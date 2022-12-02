@@ -112,7 +112,7 @@ class GUI:
         self.password.config(state='disabled')
         # time.sleep(0.1)
         flag = []
-        t = Thread(target=ClientProc.loginThread, args=(username,password,flag))
+        t = Thread(target=ClientProc.loginThread, args=(ClientProc,username,password,flag))
         t.start()
         t.join()
         if not flag: # flag not changed -> server not responding/ error
@@ -122,8 +122,6 @@ class GUI:
         self.display_friend_box()
         self.display_chat_box()
         self.display_chat_entry_box()
-
-
 
     def signup_ui(self):
         self.hide_frame()

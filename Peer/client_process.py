@@ -7,15 +7,14 @@ from os import listdir
 from tkinter import *
 from tkinter import messagebox
 import json, pickle
-from Server.Synchronization import  ReadWriteLock
-from Server.utils import getFriends, writeToStorage
+# from Server.utils import getFriends, writeToStorage
 from Deserializer import ReqTag, RepTag
 
-lock = ReadWriteLock()
+# lock = ReadWriteLock()
 #online_peers = {}
 
-SHOST = 12345
-SPORT = 'localhost'
+SHOST = 'localhost'
+SPORT = 12345
 class ClientProc():
     def __init__(self,HOST,PORT):
         self.friends = []
@@ -39,6 +38,7 @@ class ClientProc():
         # temporary socket to connect to main server
         cServer = socket(AF_INET, SOCK_STREAM)
         cServer.connect((SHOST, SPORT))
+        print(msg)
         cServer.send(json.dumps(msg).encode('utf-8'))
         try:
             data = cServer.recv(1024)
@@ -60,7 +60,7 @@ class ClientProc():
                 print('Disconnected to server')
                 return
             try:
-                # excluding login, session related response,
+                # excluding login, session-related response,
                 # only do serverProc msg and friend status update
                 print('hello')
             except Exception as e:

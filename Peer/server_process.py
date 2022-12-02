@@ -14,7 +14,7 @@ class ServerProc:
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind((HOST, PORT))
         self.server.listen(10)
-        print("Connecting...")
+        # print("Connecting...")
         # the client-proc socket to recv message from the server-proc
         self.peerASocket, addrA = self.server.accept()
         while True:

@@ -138,8 +138,8 @@ def peerConnection(conn,addr):
         try:
             data = conn.recv(1024)
             data = json.loads(data.decode('utf-8'))
-        except Exception as e:
-            disconnect(conn, id, repr(e))
+        except:
+            disconnect(conn, id)
             print(f'Disconnected to: ',addr[0], ':', str(addr[1]))
             return
         try:
@@ -195,9 +195,9 @@ def peerConnection(conn,addr):
             try:
                 conn.send(json.dumps(
                     {"type": "ERROR",
-                    "message": repr(e)}
+                     "message": repr(e)}
                 ).encode('utf-8'))
-            except Exception:
+            except:
                 continue
     # connection closed
     # conn.close()
