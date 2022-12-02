@@ -28,32 +28,52 @@ class ClientProc():
         thread = Thread(target=self.listeninThread, daemon=True)
         thread.start()
 
-    def loginThread(self,username,password,success):
-        # set message to send back
-        msg = {
-            'type': ReqTag.LOGIN,
-            'username': username,
-            'password': password
-        }
-        # temporary socket to connect to main server
-        cServer = socket(AF_INET, SOCK_STREAM)
-        cServer.connect((SHOST, SPORT))
-        print('hello')
-        cServer.send(json.dumps(msg).encode('utf-8'))
-        print('hello')
+    def loginThread(self, username, password, success):
         try:
+            # set message to send back
+            msg = {
+                'type': ReqTag.LOGIN,
+                'username': username,
+                'password': password
+            }
+            # temporary socket to connect to main server
+            cServer = socket(AF_INET, SOCK_STREAM)
+            cServer.connect((SHOST, SPORT))
+            cServer.send(json.dumps(msg).encode('utf-8'))
+            # recv data
             data = cServer.recv(1024)
             data = json.loads(data.decode('utf-8'))
-            print(data)
             if data['type'] == RepTag.LOGIN_SUCCESS:
                 # login success
-                print('hello')
                 self.friends = data['friendlist']
                 success.append('324hi2932jj') # adding gibberish to indicate success
             cServer.close()
         except Exception as e:
             print(repr(e))
 
+    def signupThread(self, username, password, nickname, success):
+        try:
+            # set message to send back
+            msg = {
+                'type': ReqTag.LOGIN,
+                'username': username,
+                'password': password,
+                'nickname': nickname
+            }
+            # temporary socket to connect to main server
+            cServer = socket(AF_INET, SOCK_STREAM)
+            cServer.connect((SHOST, SPORT))
+            cServer.send(json.dumps(msg).encode('utf-8'))
+            # recv data
+            data = cServer.recv(1024)
+            data = json.loads(data.decode('utf-8'))
+            if data['type'] == RepTag.SIGNUP_SUCCESS:
+                # signup success
+                success.append('324hi2932jj')  # adding gibberish to indicate success
+            cServer.close()
+
+        except Exception as e:
+            print(repr(e))
     def listeninThread(self):
         while True:
             try:

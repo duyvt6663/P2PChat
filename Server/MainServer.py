@@ -155,7 +155,7 @@ def peerConnection(conn,addr):
                 }).encode('utf-8'))  # send back friendlist
                 id = hashmap[data['username']]
                 updateUser(id)
-                assert id != 1
+                assert id != -1
             elif data['type'] == ReqTag.SIGNUP:
                 lock.acquire_read()
                 SignUpSchema().load(data)
@@ -163,7 +163,7 @@ def peerConnection(conn,addr):
                 signup(conn, data)
                 id = hashmap[data['username']]
                 updateUser(id)
-                assert id != 1
+                assert id != -1
             elif data['type'] == ReqTag.SESSION_OPEN:
                 destID = SessionSchema().load(data)['destID']
                 createSession(addr,id,destID)

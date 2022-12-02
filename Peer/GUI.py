@@ -48,10 +48,9 @@ class GUI:
         # init server and client processes
         self.HOST = '127.0.0.1'  # server proc host
         self.PORT = random.randint(1024, 49151) # server proc port
-        self.server = Thread(target=ServerProc, args=[self.HOST,self.PORT], daemon=True)
-        self.server.start()
+        self.server = ServerProc(self.HOST, self.PORT)
         # take a client socket to connect to server proc, and recv msg + file
-        self.client = ClientProc(self.HOST,self.PORT)
+        self.client = ClientProc(self.HOST, self.PORT)
     def init_frame(self):
         # init or reset login/signup frame
         self.userframe = Frame()
@@ -64,7 +63,6 @@ class GUI:
         self.root.title("Chat App")
         self.root.resizable(0, 0)
         self.login_ui()
-
     # def createSocket(self):
     #     try:
     #         so = socket(AF_INET, SOCK_STREAM)
@@ -77,7 +75,16 @@ class GUI:
 
     # def sendMessage(self, conn, msg):
     #     conn.sendall(pickle.dumps(msg))
-
+    def hide_frame(self):
+        self.userframe.pack_forget()
+        self.passframe.pack_forget()
+        self.nickframe.pack_forget()
+        self.login_but.pack_forget()
+        self.signup_but.pack_forget()
+        if self.logout_but: self.logout_but.pack_forget()
+        if self.frframe: self.frframe.pack_forget()
+        if self.chatframe: self.chatframe.pack_forget()
+        if self.entryframe: self.entryframe.pack_forget()
 
     def login_ui(self):
         self.hide_frame()
@@ -112,7 +119,7 @@ class GUI:
         self.password.config(state='disabled')
         # time.sleep(0.1)
         flag = []
-        t = Thread(target=ClientProc.loginThread, args=(ClientProc,username,password,flag))
+        t = Thread(target=ClientProc.loginThread, args=(self.client, username, password, flag))
         t.start()
         t.join()
         if not flag: # flag not changed -> server not responding/ error/ wrong login info
@@ -120,7 +127,6 @@ class GUI:
             self.username.config(state='normal')
             self.password.config(state='normal')
             return
-        print(flag[0])
         self.hide_frame()
         self.display_logout_but()
         self.display_friend_box()
@@ -150,8 +156,34 @@ class GUI:
         self.signup_but.pack(anchor='center')
         self.login_but.pack(anchor='nw')
 
-    # ------------------------- GUI --------------------------
-    # 
+    def sign_up(self):
+        username = self.username.get()
+        password = self.password.get()
+        nickname = self.nickname.get()
+        if len(username) == 0:
+            messagebox.showerror('Message', "Please enter username")
+            return
+        if len(password) == 0:
+            messagebox.showerror('Message', "Please enter password")
+            return
+        if len(nickname) == 0:
+            messagebox.showerror('Message', "Please enter nickname")
+            return
+        self.username.config(state='disabled')
+        self.password.config(state='disabled')
+        self.nickname.config(state='disabled')
+        # time.sleep(0.1)
+
+
+        if reply == 'SUCCESS':
+            messagebox.showinfo('Message', 'Sign up successful!')
+        elif reply == 'FAIL':
+            messagebox.showinfo('Message', 'Username has in used')
+        self.username.config(state='normal')
+        self.password.config(state='normal')
+        self.nickname.config(state='normal')
+    # ------------------------- GUI ------------------------------------
+    #####################################################################
 
     def request_session(self):
         username = self.targets.get()
@@ -369,16 +401,7 @@ class GUI:
             #self.server.close()
             exit(0)
 
-    def hide_frame(self):
-        self.userframe.pack_forget()
-        self.passframe.pack_forget()
-        self.nickframe.pack_forget()
-        self.login_but.pack_forget()
-        self.signup_but.pack_forget()
-        if self.logout_but: self.logout_but.pack_forget()
-        if self.frframe: self.frframe.pack_forget()
-        if self.chatframe: self.chatframe.pack_forget()
-        if self.entryframe: self.entryframe.pack_forget()
+
 
 
 
