@@ -115,8 +115,12 @@ class GUI:
         t = Thread(target=ClientProc.loginThread, args=(ClientProc,username,password,flag))
         t.start()
         t.join()
-        if not flag: # flag not changed -> server not responding/ error
+        if not flag: # flag not changed -> server not responding/ error/ wrong login info
+            messagebox.showinfo('Message', 'Username or password is invalid')
+            self.username.config(state='normal')
+            self.password.config(state='normal')
             return
+        print(flag[0])
         self.hide_frame()
         self.display_logout_but()
         self.display_friend_box()

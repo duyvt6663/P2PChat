@@ -38,13 +38,16 @@ class ClientProc():
         # temporary socket to connect to main server
         cServer = socket(AF_INET, SOCK_STREAM)
         cServer.connect((SHOST, SPORT))
-        print(msg)
+        print('hello')
         cServer.send(json.dumps(msg).encode('utf-8'))
+        print('hello')
         try:
             data = cServer.recv(1024)
             data = json.loads(data.decode('utf-8'))
+            print(data)
             if data['type'] == RepTag.LOGIN_SUCCESS:
                 # login success
+                print('hello')
                 self.friends = data['friendlist']
                 success.append('324hi2932jj') # adding gibberish to indicate success
             cServer.close()
@@ -64,7 +67,7 @@ class ClientProc():
                 # only do serverProc msg and friend status update
                 print('hello')
             except Exception as e:
-                    print(repr(e))
+                print(repr(e))
 
 #   def is_account_exist(self, username):
 #     lock.acquire_read()

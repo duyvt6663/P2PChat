@@ -5,10 +5,10 @@ from Synchronization import  ReadWriteLock
 
 def getFriends(username, clients,lock):
     lock.acquire_read()
-    with open('./Server/HMap.json', 'r') as openfile:
+    with open('HMap.json', 'r') as openfile:
         hashmap = json.load(openfile)
     id = hashmap[username]
-    with open('./Server/Users.json', 'r') as openfile:
+    with open('Users.json', 'r') as openfile:
         users = json.load(openfile)
     lock.release_read()
     res = []
@@ -18,7 +18,7 @@ def getFriends(username, clients,lock):
                     'status': 'ONLINE' if hashmap[username] in clients else 'OFFLINE'})
     return res
 
-def writeToStorage(new_data, lock, filename='./Server/Users.json'):
+def writeToStorage(new_data, lock, filename='Users.json'):
     lock.acquire_write()
     with open(filename,'r+') as file:
         # First we load existing data into a dict.

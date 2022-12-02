@@ -16,14 +16,14 @@ from Synchronization import ReadWriteLock
 lock = ReadWriteLock()
 clients = {} # online users, an ID can have multiple connection instances, e.g 1 : [conn1, conn2]
 sessions = {} # current online chats
-with open('./Server/HMap.json', 'r') as file:
+with open('HMap.json', 'r') as file:
     hashmap = json.load(file)
 ###################################################################
 
 # broadcast status of a friend
 def updateStatus(id, type=RepTag.ONLINE):
     lock.acquire_read()
-    with open('./Server/Users.json', 'r') as openfile:
+    with open('Users.json', 'r') as openfile:
         users = json.load(openfile)
     lock.release_read()
     for friend in users[id]['friends']:
@@ -35,7 +35,7 @@ def updateStatus(id, type=RepTag.ONLINE):
 # broadcast status of a session
 def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
     lock.acquire_read()
-    with open('./Server/Users.json', 'r') as file:
+    with open('Users.json', 'r') as file:
         users = json.load(file)
     lock.release_read()
     clients[srcID].send(json.dumps({
@@ -92,7 +92,7 @@ def signup(conn, client):
     hashmap[client['username']] = len(hashmap)
     # write hashmap back to file
     lock.acquire_write()
-    with open('./Server/HMap.json', 'w') as file:
+    with open('HMap.json', 'w') as file:
         json.dump(hashmap, file, indent=4)
     lock.release_write()
     # add to Users.json
@@ -121,7 +121,7 @@ def disconnect(conn, id):
         return
     # id valid
     # update status
-    clients[id].pop(conn)
+    clients[id].remove(conn)
     if not len(clients[id]):
         clients.pop(id)
         # close related sessions when no connection from the same id found
@@ -181,7 +181,7 @@ def peerConnection(conn,addr):
                 destID = SessionSchema().load(data)['destID']
                 incrementSession(id,destID,-1)
             elif data['type'] == ReqTag.LOGOUT: # logout, update status
-                clients[id].pop(conn)
+                clients[id].remove(conn)
                 updateStatus(id,RepTag.OFFLINE)
                 id = -1
             else: # disconnect or gibberish data
