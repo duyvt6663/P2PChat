@@ -198,9 +198,20 @@ class GUI:
         self.display_chat_box()
         self.display_chat_entry_box()
 
-    # ------------------------- NAME SECTION ----------------------------
+    # ------------------------- LOGOUT SECTION --------------------------
     #####################################################################
+    def display_logout_but(self):
+        self.logout_but = Frame()
+        Label(self.logout_but, text=self.username.get()).pack(side='left', padx=10)
+        Button(self.logout_but, text="Log out", width=10, command=self.log_out).pack(side='left')
+        self.logout_but.pack(anchor='nw')
+    def log_out(self):
+        msg = (self.LOGOUT, (self.username.get(),))
+        self.sendMessage(self.serverSocket, msg)
+        self.login_ui()
 
+    # -------------------------  SECTION --------------------------
+    #####################################################################
     def request_session(self):
         username = self.targets.get()
         if username in self.peers:
@@ -320,11 +331,7 @@ class GUI:
         msg = (self.FILE_TRANSFER,(filename,data))
         self.sendMessage(conn,msg)
 
-    def display_logout_but(self):
-        self.logout_but = Frame()
-        Label(self.logout_but, text=self.username.get()).pack(side='left', padx=10)
-        Button(self.logout_but, text="Log out", width=10, command=self.log_out).pack(side='left')
-        self.logout_but.pack(anchor='nw')
+
 
     def display_friend_box(self):
         self.frframe = Frame()

@@ -25,8 +25,11 @@ class ClientProc():
         self.cServer = socket(AF_INET, SOCK_STREAM)
         self.cServer.connect((SHOST, SPORT))
         # set client thread listening to main server
-        thread = Thread(target=self.listeninThread, daemon=True)
-        thread.start()
+        sthread = Thread(target=self.listeninServerThread, daemon=True)
+        sthread.start()
+        # set client thread listening to server proc/other peers
+        pthread = Thread(target=self.listeninPeerThread, daemon=True)
+        pthread.start()
 
     def loginThread(self, username, password, success):
         try:
@@ -73,10 +76,27 @@ class ClientProc():
             cServer.close()
         except Exception as e:
             print(repr(e))
-    def listeninThread(self):
+
+    def listeninServerThread(self):
         while True:
             try:
                 data = self.cServer.recv(1024)
+                data = json.loads(data.decode('utf-8'))
+            except:
+                print('Disconnected to server')
+                return
+            try:
+                # excluding login, session-related response,
+                # only do serverProc msg and friend status update
+                print('hello')
+            except Exception as e:
+                print(repr(e))
+
+    def listeninPeerThread(self):
+        # message passed down from server proc
+        while True:
+            try:
+                data = self.pServer.recv(1024)
                 data = json.loads(data.decode('utf-8'))
             except:
                 print('Disconnected to server')
