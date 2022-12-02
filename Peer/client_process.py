@@ -13,13 +13,17 @@ from Server.utils import getFriends, writeToStorage
 lock = ReadWriteLock()
 #online_peers = {}
 
-
+SHOST = 12345
+SPORT = 'localhost'
 class ClientProc():
     def __init__(self,HOST,PORT):
         self.online_peers = {}
-
-        self.serverSocket = socket(AF_INET, SOCK_STREAM)
-        self.serverSocket.connect((HOST, PORT))
+        # socket to connect to server proc
+        self.pServer = socket(AF_INET, SOCK_STREAM)
+        self.pServer.connect((HOST, PORT))
+        # socket to connect to main server
+        self.cServer = socket(AF_INET, SOCK_STREAM)
+        self.cServer.connect((SHOST, SPORT))
     def is_account_exist(self, username):
         lock.acquire_read()
         with open('./Server/Users.json', 'r') as file:
@@ -32,7 +36,6 @@ class ClientProc():
         return False
 
     # signup a user
-
     def sign_up_user(self, user):
         account = {
             "nickname": user['nickname'],
@@ -43,7 +46,6 @@ class ClientProc():
         writeToStorage(lock, account);
 
     # retrieves the password for a given username
-
     def get_password(self, nickname):
         lock.acquire_read()
         with open('./Server/Users.json', 'r') as file:
@@ -53,8 +55,6 @@ class ClientProc():
         for i in users:
             if users[i]['nickname'] == nickname:
                 return users[i]['password']
-
-        
 
     # checks if an account with the username online
 
@@ -74,7 +74,6 @@ class ClientProc():
         }
         self.online_peers.update(active_peer);
 
-
     # logs out the user
 
     def user_logout(self, nickname):
@@ -85,3 +84,5 @@ class ClientProc():
     def get_peer_ip_port(self, nickname):
         retrieve_peer = self.online_peers.find({"nickname": nickname})
         return (retrieve_peer["ip"], retrieve_peer["port"])
+    def loginThread(self):
+

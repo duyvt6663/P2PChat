@@ -10,7 +10,6 @@ from tkinter import messagebox
 
 
 class ServerProc:
-    server = None
     def __init__(self, HOST, PORT):
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind((HOST, PORT))

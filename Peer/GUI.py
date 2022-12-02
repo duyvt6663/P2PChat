@@ -9,6 +9,7 @@ from tkinter import *
 from tkinter import messagebox
 from server_process import ServerProc
 from client_process import ClientProc
+from Deserializer import ReqTag, RepTag
 
 class GUI:
     serverSocket = None
@@ -19,7 +20,6 @@ class GUI:
     REQUEST_CONNECTION = 'REQUEST_CONNECTION'
     REJECT_CONNECTION = 'REJECT_CONNECTION'
     ACCEPT_CONNECTION = 'ACCEPT_CONNECTION'
-    LOGIN = 'LOGIN'
     LOGOUT = 'LOGOUT'
     SIGNUP = 'SIGNUP'
     FRIENDS_LIST = 'FRIENDS_LIST'
@@ -46,11 +46,12 @@ class GUI:
         self.peers = {}
         self.friends = []
         # init server and client processes
-        self.HOST = '127.0.0.1'  # server host
-        self.PORT = random.randint(1024, 49151) # server port
-        self.server = Thread(target=ServerProc, args=[self.HOST,self.PORT])
+        self.HOST = '127.0.0.1'  # server proc host
+        self.PORT = random.randint(1024, 49151) # server proc port
+        self.server = Thread(target=ServerProc, args=[self.HOST,self.PORT], daemon=True)
         self.server.start()
-        self.client = ClientProc(self.HOST,self.PORT) # take a client socket to connect to server proc
+        # take a client socket to connect to server proc, and recv msg + file
+        self.client = ClientProc(self.HOST,self.PORT)
     def init_frame(self):
         # init or reset login/signup frame
         self.userframe = Frame()
@@ -58,7 +59,6 @@ class GUI:
         self.nickframe = Frame()
         self.login_but = Frame()
         self.signup_but = Frame()
-
 
     def init_gui(self):  # GUI initializer
         self.root.title("Chat App")
@@ -99,8 +99,46 @@ class GUI:
         self.signup_but.pack(anchor='nw')
 
     def login(self):
-        loginmsg = {}
-        t = Thread(target = client.loginThread,args=...)
+        username = self.username.get()
+        password = self.password.get()
+        if len(username) == 0:
+            messagebox.showerror('Message', "Please enter username")
+            return
+        if len(password) == 0:
+            messagebox.showerror('Message', "Please enter password")
+            return
+        # success
+        self.username.config(state='disabled')
+        self.password.config(state='disabled')
+        time.sleep(0.1)
+        # set message to send back
+        msg = (, (self.username.get(), self.password.get()))
+        self.sendMessage(self.serverSocket, msg)
+        time.sleep(0.1)
+        msg = (HOST, PORT)
+        self.sendMessage(self.serverSocket, msg)
+
+        header = None
+        while header != ReqTag.LOGIN:
+            header, (reply,) = pickle.loads(self.serverSocket.recv(1024))
+
+        if reply == 'SUCCESS':
+            frlist_dumps = b''
+            while True:
+                income = self.serverSocket.recv(1024)
+                frlist_dumps += income
+                if len(income) < 1024:
+                    break
+            header, args = pickle.loads(frlist_dumps)
+            self.friend_list = args[0]
+            self.hide_frame()
+            self.display_logout_but()
+            self.display_friend_box()
+            self.display_chat_box()
+            self.display_chat_entry_box()
+            thread = threading.Thread(target=self.receive_message_from_server, daemon=True)
+            thread.start()
+        t = Thread(target=ClientProc.loginThread, args=...)
         t.start()
 
     def signup_ui(self):
