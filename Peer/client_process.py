@@ -1,7 +1,7 @@
 # sample code
 from socket import *
 import time
-from threading import Thread
+from threading import Thread, Lock
 import random
 from os import listdir
 from tkinter import *
@@ -15,6 +15,7 @@ from Deserializer import ReqTag, RepTag
 
 SHOST = 'localhost'
 SPORT = 12345
+lock = Lock()
 class ClientProc():
     def __init__(self,HOST,PORT):
         self.friends = []
@@ -39,18 +40,19 @@ class ClientProc():
                 'username': username,
                 'password': password
             }
-            # temporary socket to connect to main server
-            cServer = socket(AF_INET, SOCK_STREAM)
-            cServer.connect((SHOST, SPORT))
-            cServer.send(json.dumps(msg).encode('utf-8'))
+            # use main server socket
+            lock.acquire()
+            self.cServer.send(json.dumps(msg).encode('utf-8'))
+            lock.release()
             # recv data
-            data = cServer.recv(1024)
+            lock.acquire()
+            data = self.cServer.recv(1024)
+            lock.release()
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.LOGIN_SUCCESS:
                 # login success
                 self.friends = data['friendlist']
                 success.append('324hi2932jj') # adding gibberish to indicate success
-            cServer.close()
         except Exception as e:
             print(repr(e))
 
@@ -63,24 +65,25 @@ class ClientProc():
                 'password': password,
                 'nickname': nickname
             }
-            # temporary socket to connect to main server
-            cServer = socket(AF_INET, SOCK_STREAM)
-            cServer.connect((SHOST, SPORT))
-            cServer.send(json.dumps(msg).encode('utf-8'))
+            # use main server socket
+            lock.acquire()
+            self.cServer.send(json.dumps(msg).encode('utf-8'))
+            lock.release()
             # recv data
-            data = cServer.recv(1024)
+            data = self.cServer.recv(1024)
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.SIGNUP_SUCCESS:
                 # signup success
                 success.append('hkdhfewo')  # adding gibberish to indicate success
-            cServer.close()
         except Exception as e:
             print(repr(e))
 
     def listeninServerThread(self):
         while True:
             try:
+                lock.acquire()
                 data = self.cServer.recv(1024)
+                lock.release()
                 data = json.loads(data.decode('utf-8'))
             except:
                 print('Disconnected to server')
@@ -96,7 +99,9 @@ class ClientProc():
         # message passed down from server proc
         while True:
             try:
+                lock.acquire()
                 data = self.pServer.recv(1024)
+                lock.release()
                 data = json.loads(data.decode('utf-8'))
             except:
                 print('Disconnected to server')

@@ -133,7 +133,7 @@ def disconnect(conn, id):
 # peer handling function
 def peerConnection(conn,addr):
     # state handling
-    id = -1  # default id
+    id = -1 # default id
     while True:
         try:
             data = conn.recv(1024)
@@ -143,19 +143,21 @@ def peerConnection(conn,addr):
             print(f'Disconnected to: ',addr[0], ':', str(addr[1]))
             return
         try:
+            # always authenticate by login or sign up first due to no session token
             if data['type'] == ReqTag.LOGIN:
                 # login authentication
                 lock.acquire_read()
                 LoginAuthenSchema().load(data)
                 lock.release_read()
                 friendlist = getFriends(data['username'], clients, lock)
+
                 conn.send(json.dumps({
                     'type': RepTag.LOGIN_SUCCESS,
                     'friendlist': friendlist
                 }).encode('utf-8'))  # send back friendlist
+
                 id = hashmap[data['username']]
                 updateUser(id)
-                assert id != -1
             elif data['type'] == ReqTag.SIGNUP:
                 lock.acquire_read()
                 SignUpSchema().load(data)
@@ -163,7 +165,6 @@ def peerConnection(conn,addr):
                 signup(conn, data)
                 id = hashmap[data['username']]
                 updateUser(id)
-                assert id != -1
             elif data['type'] == ReqTag.SESSION_OPEN:
                 destID = SessionSchema().load(data)['destID']
                 createSession(addr,id,destID)
