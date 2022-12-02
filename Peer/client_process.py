@@ -29,17 +29,25 @@ class ClientProc():
         thread = Thread(target=self.listeninThread, daemon=True)
         thread.start()
 
-    def loginThread(self,username,password,friends):
+    def loginThread(self,username,password,success):
         # set message to send back
         msg = {
             'type': ReqTag.LOGIN,
             'username': username,
             'password': password
         }
-        self.cServer.send(json.dumps(msg).encode('utf-8'))
-
-
-
+        # temporary socket to connect to main server
+        cServer = socket(AF_INET, SOCK_STREAM)
+        cServer.connect((SHOST, SPORT))
+        cServer.send(json.dumps(msg).encode('utf-8'))
+        try:
+            data = cServer.recv(1024)
+            data = json.loads(data.decode('utf-8'))
+            if data['type'] == RepTag.LOGIN_SUCCESS:
+                # login success
+                self.friends = data['friendlist']
+                success.append('324hi2932jj') # adding gibberish to indicate success
+            cServer.close()
         except Exception as e:
             print(repr(e))
 
@@ -52,10 +60,9 @@ class ClientProc():
                 print('Disconnected to server')
                 return
             try:
-                if data['type'] == RepTag.LOGIN_SUCCESS:
-                    # login success
-                    self.friends = data['friendlist']
-
+                # excluding login, session related response,
+                # only do serverProc msg and friend status update
+                print('hello')
             except Exception as e:
                     print(repr(e))
 

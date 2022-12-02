@@ -111,11 +111,11 @@ class GUI:
         self.username.config(state='disabled')
         self.password.config(state='disabled')
         # time.sleep(0.1)
-        friends = []
-        t = Thread(target=ClientProc.loginThread, args=(username,password,friends))
+        flag = []
+        t = Thread(target=ClientProc.loginThread, args=(username,password,flag))
         t.start()
         t.join()
-        if not friends: # friends not changed -> server not responding/ error
+        if not flag: # flag not changed -> server not responding/ error
             return
         self.hide_frame()
         self.display_logout_but()
