@@ -12,10 +12,14 @@ from Server.utils import getFriends, writeToStorage
 
 lock = ReadWriteLock()
 #online_peers = {}
-class Client():
-    def __init__(self):
+
+
+class ClientProc():
+    def __init__(self,HOST,PORT):
         self.online_peers = {}
-        pass
+
+        self.serverSocket = socket(AF_INET, SOCK_STREAM)
+        self.serverSocket.connect((HOST, PORT))
     def is_account_exist(self, username):
         lock.acquire_read()
         with open('./Server/Users.json', 'r') as file:

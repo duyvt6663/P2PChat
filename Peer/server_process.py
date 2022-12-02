@@ -9,15 +9,14 @@ from tkinter import *
 from tkinter import messagebox
 
 
-class ServerProcess:
-    HOST = '127.0.0.1'
-    PORT = random.randint(1024, 49151)
+class ServerProc:
     server = None
-    def __init__(self):
+    def __init__(self, HOST, PORT):
         self.server = socket(AF_INET, SOCK_STREAM)
-        self.server.bind((self.HOST, self.PORT))
+        self.server.bind((HOST, PORT))
         self.server.listen(10)
         print("Connecting...")
+        # the client-proc socket to recv message from the server-proc
         self.peerASocket, addrA = self.server.accept()
         while True:
             conn, addr = self.server.accept()

@@ -2,12 +2,13 @@
 from socket import *
 import pickle
 import time
-import threading
+from threading import Thread
 import random
 from os import listdir
 from tkinter import *
 from tkinter import messagebox
-import server_process
+from server_process import ServerProc
+from client_process import ClientProc
 
 class GUI:
     serverSocket = None
@@ -24,11 +25,9 @@ class GUI:
     FRIENDS_LIST = 'FRIENDS_LIST'
     FILE_TRANSFER = 'FILE_TRANSFER'
     MESSAGE = 'MESSAGE'
-    
-    #path = 'D:\\assignment2\\comp_net_assignment_1-master\\recv_file'
 
     def __init__(self, master):
-        self.root = master
+        self.root = master # init GUI tree
         self.chat_transcript_area = None
         self.enter_text_widget = None
         self.frframe = None
@@ -38,17 +37,33 @@ class GUI:
         self.chat_history = {}
         self.username = None
         self.password = None
-        self.repassword = None
+        self.nickname = None
         self.friend_list = {} #{username: [ip, port, status]}
         self.target = '' #username of opponent
         self.targets = None
-        self.reset_frame()
-        self.init_socket()
+        self.init_frame()
         self.init_gui()
         self.peers = {}
         self.friends = []
-        self.server = threading.Thread()
+        # init server and client processes
+        self.HOST = '127.0.0.1'  # server host
+        self.PORT = random.randint(1024, 49151) # server port
+        self.server = Thread(target=ServerProc, args=[self.HOST,self.PORT])
         self.server.start()
+        self.client = ClientProc(self.HOST,self.PORT) # take a client socket to connect to server proc
+    def init_frame(self):
+        # init or reset login/signup frame
+        self.userframe = Frame()
+        self.passframe = Frame()
+        self.nickframe = Frame()
+        self.login_but = Frame()
+        self.signup_but = Frame()
+
+
+    def init_gui(self):  # GUI initializer
+        self.root.title("Chat App")
+        self.root.resizable(0, 0)
+        self.login_ui()
 
     def createSocket(self):
         try:
@@ -60,24 +75,13 @@ class GUI:
         except:
             return self.createSocket()
 
-    def init_socket(self):
-        serverName = "127.0.0.1"
-        serverPort = 12000
-
-        self.serverSocket = socket(AF_INET, SOCK_STREAM)
-        self.serverSocket.connect((serverName, serverPort))
-
     def sendMessage(self, conn, msg):
         conn.sendall(pickle.dumps(msg))
 
-    def init_gui(self):  # GUI initializer
-        self.root.title("Chat App")
-        self.root.resizable(0, 0)
-        self.login_ui()
 
     def login_ui(self):
         self.hide_frame()
-        self.reset_frame()
+        self.init_frame()
 
         Label(self.userframe, text='Username:', font=("Helvetica", 13)).pack(side='left',padx=10)
         self.username = Entry(self.userframe, width=40, borderwidth=2)
@@ -85,7 +89,7 @@ class GUI:
         Label(self.passframe, text='Password:', font=("Helvetica", 13)).pack(side='left',padx=10)
         self.password = Entry(self.passframe, show = '*', width=40, borderwidth=2)
         self.password.pack(side='left',anchor='e')
-        Button(self.login_but, text="Log in", width=10, command=self.log_in).pack(side='bottom')
+        Button(self.login_but, text="Log in", width=10, command=self.login).pack(side='bottom')
         Label(self.signup_but, text='If you don\'t have an account,', font=("Helvetica", 10)).pack(side='left', padx=10)
         Button(self.signup_but, text='Sign up', bd=0, fg='blue', command=self.signup_ui).pack(side='left')
 
@@ -96,16 +100,12 @@ class GUI:
 
     def login(self):
         loginmsg = {}
-        t = thread(target = client.loginThread,)
-
-    def loginThread():
-        send(package(msg) ->json) -> server
-        recv(friendlist)
-        save(friendlist)
+        t = Thread(target = client.loginThread,args=...)
+        t.start()
 
     def signup_ui(self):
         self.hide_frame()
-        self.reset_frame()
+        self.init_frame()
 
         Label(self.userframe, text='Username:', font=("Helvetica", 13)).pack(side='left', padx=10)
         self.username = Entry(self.userframe, width=40, borderwidth=2)
@@ -113,16 +113,16 @@ class GUI:
         Label(self.passframe, text='Password:', font=("Helvetica", 13)).pack(side='left', padx=10)
         self.password = Entry(self.passframe, show='*', width=40, borderwidth=2)
         self.password.pack(side='left', anchor='e')
-        Label(self.repassframe, text='Re-Password:', font=("Helvetica", 13)).pack(side='left', padx=10)
-        self.repassword = Entry(self.repassframe, show='*', width=40, borderwidth=2)
-        self.repassword.pack(side='left', anchor='e')
+        Label(self.nickframe, text='Nickname:', font=("Helvetica", 13)).pack(side='left', padx=10)
+        self.nickname = Entry(self.nickframe, show='*', width=40, borderwidth=2)
+        self.nickname.pack(side='left', anchor='e')
         Button(self.signup_but, text="Sign up", width=10, command=self.sign_up).pack(side='bottom')
         Label(self.login_but, text='If you already have an account,', font=("Helvetica", 10)).pack(side='left', padx=10)
         Button(self.login_but, text='Log in', bd=0, fg='blue', command=self.login_ui).pack(side='left')
 
         self.userframe.pack(anchor='nw')
         self.passframe.pack(anchor='nw')
-        self.repassframe.pack(anchor='nw')
+        self.nickframe.pack(anchor='nw')
         self.signup_but.pack(anchor='center')
         self.login_but.pack(anchor='nw')
 
@@ -142,7 +142,7 @@ class GUI:
         self.sendMessage(self.serverSocket,msg)
         self.reset_chatbox()
         print(ip,port)
-        t=threading.Thread(target=self.wait_connect,args = (so,username), daemon = True)
+        t = Thread(target=self.wait_connect,args = (so,username), daemon = True)
         t.start()
 
     def wait_connect(self,so,username):
@@ -153,7 +153,7 @@ class GUI:
             self.peers[username] = conn
             if username not in self.chat_history:
                 self.chat_history[username] = []
-            t = threading.Thread(target=self.receive_message_from_peer,args =(username,), daemon = True)
+            t = Thread(target=self.receive_message_from_peer,args =(username,), daemon = True)
             t.start()
         except:
             return
@@ -167,7 +167,7 @@ class GUI:
         if username not in self.chat_history:
             self.chat_history[username]=[]
 
-        t = threading.Thread(target=self.receive_message_from_peer,args =(username,),daemon = True)
+        t = Thread(target=self.receive_message_from_peer,args =(username,),daemon = True)
         t.start()
         # except:
         #     print('Không thể connect tới',username)
@@ -342,13 +342,13 @@ class GUI:
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.root.destroy()
             self.serverSocket.close()
-            self.server.close()
+            #self.server.close()
             exit(0)
 
     def hide_frame(self):
         self.userframe.pack_forget()
         self.passframe.pack_forget()
-        self.repassframe.pack_forget()
+        self.nickframe.pack_forget()
         self.login_but.pack_forget()
         self.signup_but.pack_forget()
         if self.logout_but: self.logout_but.pack_forget()
@@ -356,12 +356,7 @@ class GUI:
         if self.chatframe: self.chatframe.pack_forget()
         if self.entryframe: self.entryframe.pack_forget()
 
-    def reset_frame(self):
-        self.userframe = Frame()
-        self.passframe = Frame()
-        self.repassframe = Frame()
-        self.login_but = Frame()
-        self.signup_but = Frame()
+
 
     def reset_chatbox(self):
         if self.entryframe:self.entryframe.pack_forget()
