@@ -55,7 +55,7 @@ class ClientProc():
         try:
             # set message to send back
             msg = {
-                'type': ReqTag.LOGIN,
+                'type': ReqTag.SIGNUP,
                 'username': username,
                 'password': password,
                 'nickname': nickname
@@ -69,9 +69,8 @@ class ClientProc():
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.SIGNUP_SUCCESS:
                 # signup success
-                success.append('324hi2932jj')  # adding gibberish to indicate success
+                success.append('hkdhfewo')  # adding gibberish to indicate success
             cServer.close()
-
         except Exception as e:
             print(repr(e))
     def listeninThread(self):

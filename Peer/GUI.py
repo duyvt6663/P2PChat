@@ -86,6 +86,9 @@ class GUI:
         if self.chatframe: self.chatframe.pack_forget()
         if self.entryframe: self.entryframe.pack_forget()
 
+    # ------------------------- LOGIN GUI -------------------------------
+    #####################################################################
+
     def login_ui(self):
         self.hide_frame()
         self.init_frame()
@@ -122,17 +125,21 @@ class GUI:
         t = Thread(target=ClientProc.loginThread, args=(self.client, username, password, flag))
         t.start()
         t.join()
+
         if not flag: # flag not changed -> server not responding/ error/ wrong login info
             messagebox.showinfo('Message', 'Username or password is invalid')
             self.username.config(state='normal')
             self.password.config(state='normal')
             return
+        messagebox.showinfo('Message', 'Log in successfully!')
         self.hide_frame()
         self.display_logout_but()
         self.display_friend_box()
         self.display_chat_box()
         self.display_chat_entry_box()
 
+    # ------------------------- SIGNUP GUI ------------------------------
+    #####################################################################
     def signup_ui(self):
         self.hide_frame()
         self.init_frame()
@@ -173,16 +180,25 @@ class GUI:
         self.password.config(state='disabled')
         self.nickname.config(state='disabled')
         # time.sleep(0.1)
+        flag = []
+        t = Thread(target=ClientProc.signupThread, args=(self.client, username, password, nickname, flag))
+        t.start()
+        t.join()
 
+        if not flag: # flag not changed -> server not responding/ error/ wrong signup info
+            messagebox.showinfo('Message', 'Username is currently in use')
+            self.username.config(state='normal')
+            self.password.config(state='normal')
+            self.nickname.config(state='normal')
+            return
+        messagebox.showinfo('Message', 'Sign up successfully!')
+        self.hide_frame()
+        self.display_logout_but()
+        self.display_friend_box()
+        self.display_chat_box()
+        self.display_chat_entry_box()
 
-        if reply == 'SUCCESS':
-            messagebox.showinfo('Message', 'Sign up successful!')
-        elif reply == 'FAIL':
-            messagebox.showinfo('Message', 'Username has in used')
-        self.username.config(state='normal')
-        self.password.config(state='normal')
-        self.nickname.config(state='normal')
-    # ------------------------- GUI ------------------------------------
+    # ------------------------- NAME SECTION ----------------------------
     #####################################################################
 
     def request_session(self):
@@ -272,7 +288,6 @@ class GUI:
                 self.insertchatbox(msg)
                 self.chat_history[username] += [msg]
 
-
     def receive_message_from_server(self):
         while True:
             msg =self.recv(self.serverSocket)
@@ -310,14 +325,6 @@ class GUI:
         Label(self.logout_but, text=self.username.get()).pack(side='left', padx=10)
         Button(self.logout_but, text="Log out", width=10, command=self.log_out).pack(side='left')
         self.logout_but.pack(anchor='nw')
-
-    def display_name_section(self):
-        frame = Frame()
-        Label(frame, text='Enter your name:', font=("Helvetica", 16)).pack(side='left', padx=10)
-        self.name_widget = Entry(frame, width=50, borderwidth=2)
-        self.name_widget.pack(side='left', anchor='e')
-        self.join_button = Button(frame, text="Join", width=10, command=self.on_join).pack(side='left')
-        frame.pack(side='top', anchor='nw')
 
     def display_friend_box(self):
         self.frframe = Frame()
@@ -400,10 +407,6 @@ class GUI:
             self.serverSocket.close()
             #self.server.close()
             exit(0)
-
-
-
-
 
     def reset_chatbox(self):
         if self.entryframe:self.entryframe.pack_forget()
