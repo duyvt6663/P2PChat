@@ -106,9 +106,8 @@ def signup(conn, client):
     conn.send(json.dumps(msg).encode('utf-8'))  # notify success
 
 # post signup/login update
-def updateUser(data,id):
+def updateUser(id):
     # add id to client list; can log in multiple instances simultaneously
-    id = hashmap[data['username']]
     if id not in clients:
         clients[id] = []
     clients[id].append(conn)
@@ -120,16 +119,15 @@ def disconnect(conn, id):
     # exception-free section -> no send
     if id == -1: # no login, signup etc.
         return
-    # id valid, close related sessions
-    for i in range(len(hashmap)):
-        incrementSession(id, i, -1)
+    # id valid
     # update status
     clients[id].pop(conn)
     if not len(clients[id]):
         clients.pop(id)
+        # close related sessions when no connection from the same id found
+        for i in range(len(hashmap)):
+            incrementSession(id, i, -1)
     updateStatus(id, RepTag.OFFLINE)
-    # reset id
-    id = -1
 
 
 # peer handling function
@@ -155,13 +153,17 @@ def peerConnection(conn,addr):
                     'type': RepTag.LOGIN_SUCCESS,
                     'friendlist': friendlist
                 }).encode('utf-8'))  # send back friendlist
-                updateUser(data,id)
+                id = hashmap[data['username']]
+                updateUser(id)
+                assert id != 1
             elif data['type'] == ReqTag.SIGNUP:
                 lock.acquire_read()
                 SignUpSchema().load(data)
                 lock.release_read()
                 signup(conn, data)
-                updateUser(data,id)
+                id = hashmap[data['username']]
+                updateUser(id)
+                assert id != 1
             elif data['type'] == ReqTag.SESSION_OPEN:
                 destID = SessionSchema().load(data)['destID']
                 createSession(addr,id,destID)
@@ -197,9 +199,8 @@ def peerConnection(conn,addr):
                 ).encode('utf-8'))
             except Exception:
                 continue
-
     # connection closed
-    conn.close()
+    # conn.close()
 
 
 # main server thread

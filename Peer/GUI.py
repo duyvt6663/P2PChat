@@ -65,18 +65,18 @@ class GUI:
         self.root.resizable(0, 0)
         self.login_ui()
 
-    def createSocket(self):
-        try:
-            so = socket(AF_INET, SOCK_STREAM)
-            ip = '127.0.0.1'
-            port = random.randint(10000, 49151)
-            so.bind((ip,port))
-            return so, (ip, port)
-        except:
-            return self.createSocket()
+    # def createSocket(self):
+    #     try:
+    #         so = socket(AF_INET, SOCK_STREAM)
+    #         ip = '127.0.0.1'
+    #         port = random.randint(10000, 49151)
+    #         so.bind((ip,port))
+    #         return so, (ip, port)
+    #     except:
+    #         return self.createSocket()
 
-    def sendMessage(self, conn, msg):
-        conn.sendall(pickle.dumps(msg))
+    # def sendMessage(self, conn, msg):
+    #     conn.sendall(pickle.dumps(msg))
 
 
     def login_ui(self):
@@ -110,36 +110,20 @@ class GUI:
         # success
         self.username.config(state='disabled')
         self.password.config(state='disabled')
-        time.sleep(0.1)
-        # set message to send back
-        msg = (, (self.username.get(), self.password.get()))
-        self.sendMessage(self.serverSocket, msg)
-        time.sleep(0.1)
-        msg = (HOST, PORT)
-        self.sendMessage(self.serverSocket, msg)
-
-        header = None
-        while header != ReqTag.LOGIN:
-            header, (reply,) = pickle.loads(self.serverSocket.recv(1024))
-
-        if reply == 'SUCCESS':
-            frlist_dumps = b''
-            while True:
-                income = self.serverSocket.recv(1024)
-                frlist_dumps += income
-                if len(income) < 1024:
-                    break
-            header, args = pickle.loads(frlist_dumps)
-            self.friend_list = args[0]
-            self.hide_frame()
-            self.display_logout_but()
-            self.display_friend_box()
-            self.display_chat_box()
-            self.display_chat_entry_box()
-            thread = threading.Thread(target=self.receive_message_from_server, daemon=True)
-            thread.start()
-        t = Thread(target=ClientProc.loginThread, args=...)
+        # time.sleep(0.1)
+        friends = []
+        t = Thread(target=ClientProc.loginThread, args=(username,password,friends))
         t.start()
+        t.join()
+        if not friends: # friends not changed -> server not responding/ error
+            return
+        self.hide_frame()
+        self.display_logout_but()
+        self.display_friend_box()
+        self.display_chat_box()
+        self.display_chat_entry_box()
+
+
 
     def signup_ui(self):
         self.hide_frame()

@@ -59,6 +59,3 @@ class SessionSchema(RequestSchema):
     destID = fields.Int(required=True)
     class Meta:
         strict = True
-
-#input = '{"type": "LIN","username": "KinkSplaster69","password": "nunezYolokSi2"}'
-#RequestSchema().load(json.loads(input))
