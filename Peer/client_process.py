@@ -70,7 +70,9 @@ class ClientProc():
             self.cServer.send(json.dumps(msg).encode('utf-8'))
             lock.release()
             # recv data
+            lock.acquire()
             data = self.cServer.recv(1024)
+            lock.release()
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.SIGNUP_SUCCESS:
                 # signup success
@@ -78,7 +80,15 @@ class ClientProc():
         except Exception as e:
             print(repr(e))
 
+    def logoutThread(self):
+        # format message to send
+        msg = {'type': ReqTag.LOGOUT}
+        lock.acquire()
+        self.cServer.send(json.dumps(msg).encode('utf-8'))
+        lock.release()
+
     def listeninServerThread(self):
+        # do friend status update
         while True:
             try:
                 lock.acquire()
@@ -89,8 +99,6 @@ class ClientProc():
                 print('Disconnected to server')
                 return
             try:
-                # excluding login, session-related response,
-                # only do serverProc msg and friend status update
                 print('hello')
             except Exception as e:
                 print(repr(e))

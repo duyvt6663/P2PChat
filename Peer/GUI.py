@@ -38,7 +38,6 @@ class GUI:
         self.username = None
         self.password = None
         self.nickname = None
-        self.friend_list = {} #{username: [ip, port, status]}
         self.target = '' #username of opponent
         self.targets = None
         self.init_frame()
@@ -198,7 +197,7 @@ class GUI:
         self.display_chat_box()
         self.display_chat_entry_box()
 
-    # ------------------------- LOGOUT SECTION --------------------------
+    # ------------------------- LOGOUT UI -------------------------------
     #####################################################################
     def display_logout_but(self):
         self.logout_but = Frame()
@@ -206,17 +205,79 @@ class GUI:
         Button(self.logout_but, text="Log out", width=10, command=self.log_out).pack(side='left')
         self.logout_but.pack(anchor='nw')
     def log_out(self):
-        msg = (self.LOGOUT, (self.username.get(),))
-        self.sendMessage(self.serverSocket, msg)
+        thread = Thread(target=ClientProc.logoutThread, daemon=True)
+        thread.start()
         self.login_ui()
 
-    # -------------------------  SECTION --------------------------
+    # ------------------------- ENTRY CHAT UI ---------------------------
     #####################################################################
+    def display_chat_entry_box(self):
+        self.entryframe = Frame()
+        Label(self.entryframe, text='Enter message:', font=("Serif", 12)).pack(side='top', anchor='w')
+        self.enter_text_widget = Text(self.entryframe, width=60, height=3, font=("Serif", 12))
+        self.enter_text_widget.pack(side='left', pady=15)
+        self.enter_text_widget.bind('<Return>', self.on_enter_key_pressed)
+        self.entryframe.pack(side='top')
+
+    def on_enter_key_pressed(self, event):
+        self.send_chat()
+        self.clear_text()
+
+    def clear_text(self):
+        self.enter_text_widget.delete(1.0, 'end')
+
+    def send_chat(self):
+        senders_name = self.username.get().strip() + ": "
+        conn = self.peers[self.target]
+        data = self.enter_text_widget.get(1.0, 'end').strip()
+        if data.split(' ')[0] == '\\file_transfer':
+            path = data.split(' ')[1]
+            self.file_transfer(conn, path)
+            msg = 'Ban da gui file cho ' + self.target + ' '
+            self.insertchatbox(msg)
+            self.chat_history[self.target] += [msg]
+            return 'break'
+        msg = (senders_name + data)
+        self.insertchatbox(msg)
+        if self.target not in self.chat_history: self.chat_history[self.target] = []
+        self.chat_history[self.target] += [msg]
+
+        message = (self.MESSAGE, (self.username.get(), msg))
+        self.sendMessage(conn, message)
+        self.enter_text_widget.delete(1.0, 'end')
+        # print(self.chat_history)
+        return 'break'
+
+    # ------------------------- friend box UI ---------------------------
+    #####################################################################
+    def display_friend_box(self):
+        self.frframe = Frame()
+        Label(self.frframe, text='Friend List:', font=("Serif", 12)).pack(side='top', anchor='w')
+        self.friend_area = Frame(self.frframe, width=30, height=15)
+        scrollbar = Scrollbar(self.frframe, orient=VERTICAL)
+        self.friend_area.pack(side='left', padx=10)
+        scrollbar.pack(side='right', fill='y')
+        self.frframe.pack(side='left')
+        self.targets = StringVar(self.friend_area, '')
+        for friend in self.client.friends:
+            Radiobutton(self.friend_area, text=str((friend['nickname'], friend['status'])),
+                        variable=self.targets, value=friend['nickname'], width=30,
+                        state=DISABLED if friend['status'] == 'OFFLINE' else NORMAL,
+                        background="light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
+    def update_friend_box(self):
+        self.friend_area.pack_forget()
+        self.friend_area = Frame(self.frframe, width=30, height=15)
+        self.friend_area.pack(side='left', padx=10)
+        for friend in self.client.friends:
+            Radiobutton(self.friend_area, text=str((friend['nickname'], friend['status'])),
+                        variable=self.targets, value=friend['nickname'], width=30,
+                        state=DISABLED if friend['status'] == 'OFFLINE' else NORMAL,
+                        background="light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
     def request_session(self):
         username = self.targets.get()
         if username in self.peers:
             return
-        if self.friend_list[username][2] == 'OFFLINE':
+        if self.client.friends[username][2] == 'OFFLINE':
             messagebox.showinfo('Message', 'The user if offline!')
             return
         self.target = username
@@ -227,6 +288,31 @@ class GUI:
         print(ip,port)
         t = Thread(target=self.wait_connect,args = (so,username), daemon = True)
         t.start()
+
+    # ------------------------- chat box UI -----------------------------
+    #####################################################################
+    def display_chat_box(self):
+        self.chatframe = Frame()
+        Label(self.chatframe, text='Chat Box:', font=("Serif", 12)).pack(side='top', anchor='w')
+        self.chat_transcript_area = Text(self.chatframe, width=60, height=10, font=("Serif", 12))
+        scrollbar = Scrollbar(self.chatframe, command=self.chat_transcript_area.yview, orient=VERTICAL)
+        self.chat_transcript_area.config(yscrollcommand=scrollbar.set)
+        self.chat_transcript_area.bind('<KeyPress>', lambda e: 'break')
+        self.chat_transcript_area.pack(side='left', padx=10)
+        scrollbar.pack(side='right', fill='y')
+        self.chatframe.pack(side='top')
+        if self.target in self.chat_history:
+            for msg in self.chat_history[self.target]:
+                self.insertchatbox(msg)
+
+    def insertchatbox(self, msg):
+        self.chat_transcript_area.insert('end', msg + '\n')
+        self.chat_transcript_area.yview(END)
+
+
+
+
+
 
     def wait_connect(self,so,username):
         so.listen(5)
@@ -307,7 +393,7 @@ class GUI:
                 break
             header, args = pickle.loads(msg)
             if header == self.FRIENDS_LIST:
-                self.friend_list = args[0]
+                self.client.friends = args[0]
                 self.update_friend_box()
             elif header == self.REQUEST_CONNECTION:
                 op = args[0]
@@ -333,80 +419,8 @@ class GUI:
 
 
 
-    def display_friend_box(self):
-        self.frframe = Frame()
-        Label(self.frframe, text='Friend List:', font=("Serif", 12)).pack(side='top', anchor='w')
-        self.friend_area = Frame(self.frframe, width=30, height=15)
-        scrollbar = Scrollbar(self.frframe, orient=VERTICAL)
-        self.friend_area.pack(side='left', padx=10)
-        scrollbar.pack(side='right', fill='y')
-        self.frframe.pack(side='left')
-        self.targets = StringVar(self.friend_area, '')
-        for name in self.friend_list:
-            Radiobutton(self.friend_area, text=str((name, self.friend_list[name][2])), variable=self.targets, value=name, indicator = 0, width=30, background = "light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
-        """for fr in frlist:
-            self.friend_area.insert('end', fr[0] + '\n')
-            self.friend_area.yview(END)"""
-    def update_friend_box(self):
-        self.friend_area.pack_forget()
-        self.friend_area = Frame(self.frframe, width=30, height=15)
-        self.friend_area.pack(side='left', padx=10)
-        for name in self.friend_list:
-            Radiobutton(self.friend_area, text=str((name, self.friend_list[name][2])), variable=self.targets, value=name, indicator = 0, width=30, background = "light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
-    def display_chat_box(self):
-        self.chatframe = Frame()
-        Label(self.chatframe, text='Chat Box:', font=("Serif", 12)).pack(side='top', anchor='w')
-        self.chat_transcript_area = Text(self.chatframe, width=60, height=10, font=("Serif", 12))
-        scrollbar = Scrollbar(self.chatframe, command=self.chat_transcript_area.yview, orient=VERTICAL)
-        self.chat_transcript_area.config(yscrollcommand=scrollbar.set)
-        self.chat_transcript_area.bind('<KeyPress>', lambda e: 'break')
-        self.chat_transcript_area.pack(side='left', padx=10)
-        scrollbar.pack(side='right', fill='y')
-        self.chatframe.pack(side='top')
-        if self.target in self.chat_history:
-            for msg in self.chat_history[self.target]:
-                self.insertchatbox(msg)
 
-    def display_chat_entry_box(self):
-        self.entryframe = Frame()
-        Label(self.entryframe, text='Enter message:', font=("Serif", 12)).pack(side='top', anchor='w')
-        self.enter_text_widget = Text(self.entryframe, width=60, height=3, font=("Serif", 12))
-        self.enter_text_widget.pack(side='left', pady=15)
-        self.enter_text_widget.bind('<Return>', self.on_enter_key_pressed)
-        self.entryframe.pack(side='top')
 
-    def on_enter_key_pressed(self, event):
-        self.send_chat()
-        self.clear_text()
-
-    def clear_text(self):
-        self.enter_text_widget.delete(1.0, 'end')
-
-    def insertchatbox(self, msg):
-        self.chat_transcript_area.insert('end', msg + '\n')
-        self.chat_transcript_area.yview(END)
-
-    def send_chat(self):
-        senders_name = self.username.get().strip() + ": "
-        conn = self.peers[self.target]
-        data = self.enter_text_widget.get(1.0, 'end').strip()
-        if data.split(' ')[0] == '\\file_transfer':
-            path = data.split(' ')[1]
-            self.file_transfer(conn, path)
-            msg = 'Ban da gui file cho ' + self.target + ' '
-            self.insertchatbox(msg)
-            self.chat_history[self.target] += [msg]
-            return 'break'
-        msg = (senders_name + data)
-        self.insertchatbox(msg)
-        if self.target not in self.chat_history: self.chat_history[self.target] = []
-        self.chat_history[self.target] += [msg]
-
-        message = (self.MESSAGE, (self.username.get(), msg))
-        self.sendMessage(conn, message)
-        self.enter_text_widget.delete(1.0, 'end')
-        # print(self.chat_history)
-        return 'break'
 
     def on_close_window(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):

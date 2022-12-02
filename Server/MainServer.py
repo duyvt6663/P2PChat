@@ -40,12 +40,12 @@ def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
     lock.release_read()
     clients[srcID].send(json.dumps({
         'type': type,
-        'with': users[destID]['nickname'],
+        'with': destID,
         'status': tag
     }).encode('utf-8'))
     clients[destID].send(json.dumps({
         'type': type,
-        'with': users[srcID]['nickname'],
+        'with': srcID,
         'status': tag
     }).encode('utf-8'))
 

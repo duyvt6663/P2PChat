@@ -29,7 +29,7 @@ class ServerProc:
     def listeninThread(self, conn):
         while True:
             try:
-                message = conn.recv(1023)
+                message = conn.recv(1024)
                 self.clientSocket.send(message)
             except:
                 conn.close()
