@@ -20,7 +20,7 @@ lock = Lock()
 
 
 class ClientProc():
-    def __init__(self, HOST, PORT):
+    def __init__(self, HOST, PORT, GUI):
         self.friends = []
         self.chatSessions = {}
         # socket to connect to server proc
@@ -32,7 +32,8 @@ class ClientProc():
         self.cServer.setblocking(False)
         self.cServer.settimeout(5)
         # set client thread listening to main server
-        sthread = Thread(target=self.listeninServerThread, daemon=True)
+        sthread = Thread(target=self.listeninServerThread,
+                         args=(self, GUI), daemon=True)
         sthread.start()
         # set client thread listening to server proc/other peers
         pthread = Thread(target=self.listeninPeerThread, daemon=True)
@@ -105,8 +106,7 @@ class ClientProc():
         self.cServer.send(json.dumps(msg).encode('utf-8'))
         lock.release()
 
-    def listeninServerThread(self):
-        # do friend status update
+    def listeninServerThread(self, GUI):
         while True:
             try:
                 data = self.cServer.recv(1024)
@@ -115,15 +115,36 @@ class ClientProc():
                 print('Disconnected to server')
                 return
             try:
-                print('hello')
+                # do friend status update
                 if data['type'] == RepTag.ONLINE:
                     for i in self.friends:
                         if self.friends[i]['id'] == data['id']:
                             self.friends[i]['status'] = 'ONLINE'
+                            GUI.update_friend_box()
                 elif data['type'] == RepTag.OFFLINE:
                     for i in self.friends:
                         if self.friends[i]['id'] == data['id']:
                             self.friends[i]['status'] = 'OFFLINE'
+                            GUI.update_friend_box()
+                elif data['type'] == ReqTag.SESSION_OPEN:
+                    flag = False
+                    for i in self.friends:
+                        if self.friends[i]['id'] == data['destID']:
+                            flag = True
+                            msg = {
+                                'type': RepTag.SESSION_ACCEPT,
+                                'destID': data['destID']
+                            }
+                            self.chatSessions[data['destID']] = ['--- SESSION INITIATED ---']
+                    if not flag:
+                        msg = {
+                            'type': RepTag.SESSION_REJECT,
+                            'destID': data['destID']
+                        }
+                    self.cServer.send(json.dumps(msg).encode('utf-8'))
+                elif data['type'] == ReqTag.SESSION_CLOSE:
+                    if data['with'] in self.chatSessions and data['tag'] == 'COMPLETELY':
+                        self.chatSessions.pop(data['with'])
             except Exception as e:
                 print(repr(e))
 

@@ -11,6 +11,7 @@ from server_process import ServerProc
 from client_process import ClientProc
 from Deserializer import ReqTag, RepTag
 
+
 class GUI:
     serverSocket = None
     targetSocket = None
@@ -27,7 +28,7 @@ class GUI:
     MESSAGE = 'MESSAGE'
 
     def __init__(self, master):
-        self.root = master # init GUI tree
+        self.root = master  # init GUI tree
         self.chat_transcript_area = None
         self.enter_text_widget = None
         self.frframe = None
@@ -38,7 +39,7 @@ class GUI:
         self.username = None
         self.password = None
         self.nickname = None
-        self.target = '' #username of opponent
+        self.target = ''  # username of opponent
         self.targets = None
         self.init_frame()
         self.init_gui()
@@ -46,11 +47,12 @@ class GUI:
         self.friends = []
         # init server and client processes
         self.HOST = '127.0.0.1'  # server proc host
-        self.PORT = random.randint(1024, 49151) # server proc port
+        self.PORT = random.randint(1024, 49151)  # server proc port
         # run server proc
         self.server = ServerProc(self.HOST, self.PORT)
         # take a client socket to connect to server proc, and recv msg + file
-        self.client = ClientProc(self.HOST, self.PORT)
+        self.client = ClientProc(self.HOST, self.PORT, self)
+
     def init_frame(self):
         # init or reset login/signup frame
         self.userframe = Frame()
@@ -81,10 +83,14 @@ class GUI:
         self.nickframe.pack_forget()
         self.login_but.pack_forget()
         self.signup_but.pack_forget()
-        if self.logout_but: self.logout_but.pack_forget()
-        if self.frframe: self.frframe.pack_forget()
-        if self.chatframe: self.chatframe.pack_forget()
-        if self.entryframe: self.entryframe.pack_forget()
+        if self.logout_but:
+            self.logout_but.pack_forget()
+        if self.frframe:
+            self.frframe.pack_forget()
+        if self.chatframe:
+            self.chatframe.pack_forget()
+        if self.entryframe:
+            self.entryframe.pack_forget()
 
     # ------------------------- LOGIN GUI -------------------------------
     #####################################################################
@@ -93,15 +99,21 @@ class GUI:
         self.hide_frame()
         self.init_frame()
 
-        Label(self.userframe, text='Username:', font=("Helvetica", 13)).pack(side='left',padx=10)
+        Label(self.userframe, text='Username:', font=(
+            "Helvetica", 13)).pack(side='left', padx=10)
         self.username = Entry(self.userframe, width=40, borderwidth=2)
-        self.username.pack(side='left',anchor='e')
-        Label(self.passframe, text='Password:', font=("Helvetica", 13)).pack(side='left',padx=10)
-        self.password = Entry(self.passframe, show = '*', width=40, borderwidth=2)
-        self.password.pack(side='left',anchor='e')
-        Button(self.login_but, text="Log in", width=10, command=self.login).pack(side='bottom')
-        Label(self.signup_but, text='If you don\'t have an account,', font=("Helvetica", 10)).pack(side='left', padx=10)
-        Button(self.signup_but, text='Sign up', bd=0, fg='blue', command=self.signup_ui).pack(side='left')
+        self.username.pack(side='left', anchor='e')
+        Label(self.passframe, text='Password:', font=(
+            "Helvetica", 13)).pack(side='left', padx=10)
+        self.password = Entry(self.passframe, show='*',
+                              width=40, borderwidth=2)
+        self.password.pack(side='left', anchor='e')
+        Button(self.login_but, text="Log in", width=10,
+               command=self.login).pack(side='bottom')
+        Label(self.signup_but, text='If you don\'t have an account,',
+              font=("Helvetica", 10)).pack(side='left', padx=10)
+        Button(self.signup_but, text='Sign up', bd=0, fg='blue',
+               command=self.signup_ui).pack(side='left')
 
         self.userframe.pack(anchor='nw')
         self.passframe.pack(anchor='nw')
@@ -122,10 +134,11 @@ class GUI:
         self.password.config(state='disabled')
         # time.sleep(0.1)
         flag = []
-        t = Thread(target=ClientProc.loginThread, args=(self.client, username, password, flag))
+        t = Thread(target=ClientProc.loginThread, args=(
+            self.client, username, password, flag))
         t.start()
         t.join()
-        if not flag: # flag not changed -> server not responding/ error/ wrong login info
+        if not flag:  # flag not changed -> server not responding/ error/ wrong login info
             messagebox.showinfo('Message', 'Username or password is invalid')
             self.username.config(state='normal')
             self.password.config(state='normal')
@@ -143,18 +156,26 @@ class GUI:
         self.hide_frame()
         self.init_frame()
 
-        Label(self.userframe, text='Username:', font=("Helvetica", 13)).pack(side='left', padx=10)
+        Label(self.userframe, text='Username:', font=(
+            "Helvetica", 13)).pack(side='left', padx=10)
         self.username = Entry(self.userframe, width=40, borderwidth=2)
         self.username.pack(side='left', anchor='e')
-        Label(self.passframe, text='Password:', font=("Helvetica", 13)).pack(side='left', padx=10)
-        self.password = Entry(self.passframe, show='*', width=40, borderwidth=2)
+        Label(self.passframe, text='Password:', font=(
+            "Helvetica", 13)).pack(side='left', padx=10)
+        self.password = Entry(self.passframe, show='*',
+                              width=40, borderwidth=2)
         self.password.pack(side='left', anchor='e')
-        Label(self.nickframe, text='Nickname:', font=("Helvetica", 13)).pack(side='left', padx=10)
-        self.nickname = Entry(self.nickframe, show='*', width=40, borderwidth=2)
+        Label(self.nickframe, text='Nickname:', font=(
+            "Helvetica", 13)).pack(side='left', padx=10)
+        self.nickname = Entry(self.nickframe, show='*',
+                              width=40, borderwidth=2)
         self.nickname.pack(side='left', anchor='e')
-        Button(self.signup_but, text="Sign up", width=10, command=self.sign_up).pack(side='bottom')
-        Label(self.login_but, text='If you already have an account,', font=("Helvetica", 10)).pack(side='left', padx=10)
-        Button(self.login_but, text='Log in', bd=0, fg='blue', command=self.login_ui).pack(side='left')
+        Button(self.signup_but, text="Sign up", width=10,
+               command=self.sign_up).pack(side='bottom')
+        Label(self.login_but, text='If you already have an account,',
+              font=("Helvetica", 10)).pack(side='left', padx=10)
+        Button(self.login_but, text='Log in', bd=0, fg='blue',
+               command=self.login_ui).pack(side='left')
 
         self.userframe.pack(anchor='nw')
         self.passframe.pack(anchor='nw')
@@ -180,11 +201,12 @@ class GUI:
         self.nickname.config(state='disabled')
         # time.sleep(0.1)
         flag = []
-        t = Thread(target=ClientProc.signupThread, args=(self.client, username, password, nickname, flag))
+        t = Thread(target=ClientProc.signupThread, args=(
+            self.client, username, password, nickname, flag))
         t.start()
         t.join()
 
-        if not flag: # flag not changed -> server not responding/ error/ wrong signup info
+        if not flag:  # flag not changed -> server not responding/ error/ wrong signup info
             messagebox.showinfo('Message', 'Username is currently in use')
             self.username.config(state='normal')
             self.password.config(state='normal')
@@ -201,9 +223,12 @@ class GUI:
     #####################################################################
     def display_logout_but(self):
         self.logout_but = Frame()
-        Label(self.logout_but, text=self.username.get()).pack(side='left', padx=10)
-        Button(self.logout_but, text="Log out", width=10, command=self.log_out).pack(side='left')
+        Label(self.logout_but, text=self.username.get()).pack(
+            side='left', padx=10)
+        Button(self.logout_but, text="Log out", width=10,
+               command=self.log_out).pack(side='left')
         self.logout_but.pack(anchor='nw')
+
     def log_out(self):
         thread = Thread(target=ClientProc.logoutThread, daemon=True)
         thread.start()
@@ -213,8 +238,10 @@ class GUI:
     #####################################################################
     def display_chat_entry_box(self):
         self.entryframe = Frame()
-        Label(self.entryframe, text='Enter message:', font=("Serif", 12)).pack(side='top', anchor='w')
-        self.enter_text_widget = Text(self.entryframe, width=60, height=3, font=("Serif", 12))
+        Label(self.entryframe, text='Enter message:', font=(
+            "Serif", 12)).pack(side='top', anchor='w')
+        self.enter_text_widget = Text(
+            self.entryframe, width=60, height=3, font=("Serif", 12))
         self.enter_text_widget.pack(side='left', pady=15)
         self.enter_text_widget.bind('<Return>', self.on_enter_key_pressed)
         self.entryframe.pack(side='top')
@@ -239,7 +266,8 @@ class GUI:
             return 'break'
         msg = (senders_name + data)
         self.insertchatbox(msg)
-        if self.target not in self.chat_history: self.chat_history[self.target] = []
+        if self.target not in self.chat_history:
+            self.chat_history[self.target] = []
         self.chat_history[self.target] += [msg]
 
         message = (self.MESSAGE, (self.username.get(), msg))
@@ -252,7 +280,8 @@ class GUI:
     #####################################################################
     def display_friend_box(self):
         self.frframe = Frame()
-        Label(self.frframe, text='Friend List:', font=("Serif", 12)).pack(side='top', anchor='w')
+        Label(self.frframe, text='Friend List:', font=(
+            "Serif", 12)).pack(side='top', anchor='w')
         self.friend_area = Frame(self.frframe, width=30, height=15)
         scrollbar = Scrollbar(self.frframe, orient=VERTICAL)
         self.friend_area.pack(side='left', padx=10)
@@ -264,6 +293,7 @@ class GUI:
                         variable=self.targets, value=friend['id'], width=30,
                         state=DISABLED if friend['status'] == 'OFFLINE' else NORMAL,
                         background="light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
+
     def update_friend_box(self):
         self.friend_area.pack_forget()
         self.friend_area = Frame(self.frframe, width=30, height=15)
@@ -273,13 +303,15 @@ class GUI:
                         variable=self.targets, value=friend['id'], width=30,
                         state=DISABLED if friend['status'] == 'OFFLINE' else NORMAL,
                         background="light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
+
     def request_session(self):
         peerID = self.targets.get()
         if peerID in self.client.chatSessions:
             # switch the current chat box to the session
             return
         self.target = peerID  # current chat friend
-        thread = Thread(target=ClientProc.openSessionThread, args=(self.client, peerID), daemon=True)
+        thread = Thread(target=ClientProc.openSessionThread,
+                        args=(self.client, peerID), daemon=True)
         thread.start()
         self.reset_chatbox()
 
@@ -287,9 +319,12 @@ class GUI:
     #####################################################################
     def display_chat_box(self, sessionID=-1):
         self.chatframe = Frame()
-        Label(self.chatframe, text='Chat Box:', font=("Serif", 12)).pack(side='top', anchor='w')
-        self.chat_transcript_area = Text(self.chatframe, width=60, height=10, font=("Serif", 12))
-        scrollbar = Scrollbar(self.chatframe, command=self.chat_transcript_area.yview, orient=VERTICAL)
+        Label(self.chatframe, text='Chat Box:', font=(
+            "Serif", 12)).pack(side='top', anchor='w')
+        self.chat_transcript_area = Text(
+            self.chatframe, width=60, height=10, font=("Serif", 12))
+        scrollbar = Scrollbar(
+            self.chatframe, command=self.chat_transcript_area.yview, orient=VERTICAL)
         self.chat_transcript_area.config(yscrollcommand=scrollbar.set)
         self.chat_transcript_area.bind('<KeyPress>', lambda e: 'break')
         self.chat_transcript_area.pack(side='left', padx=10)
@@ -304,6 +339,7 @@ class GUI:
     def insertchatbox(self, msg):
         self.chat_transcript_area.insert('end', msg + '\n')
         self.chat_transcript_area.yview(END)
+
     def reset_chatbox(self):
         if self.entryframe:
             self.entryframe.pack_forget()
@@ -312,7 +348,7 @@ class GUI:
         self.display_chat_box()
         self.display_chat_entry_box()
 
-    def wait_connect(self,so,username):
+    def wait_connect(self, so, username):
         so.listen(5)
         so.settimeout(120)
         try:
@@ -320,26 +356,28 @@ class GUI:
             self.peers[username] = conn
             if username not in self.chat_history:
                 self.chat_history[username] = []
-            t = Thread(target=self.receive_message_from_peer,args =(username,), daemon = True)
+            t = Thread(target=self.receive_message_from_peer,
+                       args=(username,), daemon=True)
             t.start()
         except:
             return
 
-    def accept_session(self,username,ip,port):
-        print(username,ip,port)
+    def accept_session(self, username, ip, port):
+        print(username, ip, port)
         so = socket(AF_INET, SOCK_STREAM)
         # try:
-        so.connect((ip,port))
-        self.peers[username]=so
+        so.connect((ip, port))
+        self.peers[username] = so
         if username not in self.chat_history:
-            self.chat_history[username]=[]
+            self.chat_history[username] = []
 
-        t = Thread(target=self.receive_message_from_peer,args =(username,),daemon = True)
+        t = Thread(target=self.receive_message_from_peer,
+                   args=(username,), daemon=True)
         t.start()
         # except:
         #     print('Không thể connect tới',username)
 
-    def recv(self,conn):
+    def recv(self, conn):
         msg = b''
         while True:
             try:
@@ -351,7 +389,7 @@ class GUI:
                 break
         return msg
 
-    def receive_message_from_peer(self,username):
+    def receive_message_from_peer(self, username):
         while True:
             conn = self.peers[username]
             # msg = self.recv(conn)
@@ -364,7 +402,8 @@ class GUI:
                 message = args[1]
                 self.chat_history[username] += [message]
                 print(self.target)
-                if self.target == message.split(':')[0]: self.insertchatbox(message)
+                if self.target == message.split(':')[0]:
+                    self.insertchatbox(message)
 
             elif header == self.FILE_TRANSFER:
                 filename = args[0]
@@ -379,15 +418,15 @@ class GUI:
                 file = open(self.path + '\\' + filename, 'wb')
                 file.write(args[1])
                 file.close()
-                msg = username + ' da gui cho ban ' + filename
+                msg = username + ' đã gửi cho bạn ' + filename
                 self.insertchatbox(msg)
                 self.chat_history[username] += [msg]
 
     def receive_message_from_server(self):
         while True:
-            msg =self.recv(self.serverSocket)
+            msg = self.recv(self.serverSocket)
             if msg is None:
-                print('Mát kết nối với server')
+                print('Mất kết nối với server')
                 break
             header, args = pickle.loads(msg)
             if header == self.FRIENDS_LIST:
@@ -398,10 +437,11 @@ class GUI:
                 if messagebox.askokcancel("Connect request", "Request connection from "+op):
                     self.target = op
                     self.accept_session(*args)
-                else: print('reject kết nối từ', op)
+                else:
+                    print('reject kết nối từ', op)
         self.serverSocket.close()
 
-    def file_transfer(self,conn,file_path):
+    def file_transfer(self, conn, file_path):
         file = open(file_path, 'rb')
         n = file_path.split('\\')
         filename = n[len(n)-1]
@@ -409,23 +449,22 @@ class GUI:
         while True:
             line = file.read(1024)
             data += line
-            if len(line)<1024:
+            if len(line) < 1024:
                 break
         file.close()
-        msg = (self.FILE_TRANSFER,(filename,data))
-        self.sendMessage(conn,msg)
+        msg = (self.FILE_TRANSFER, (filename, data))
+        self.sendMessage(conn, msg)
 
     def on_close_window(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.root.destroy()
             self.serverSocket.close()
-            #self.server.close()
+            # self.server.close()
             exit(0)
-
-
 
     def clear_buffer(self, conn):
         try:
-            while conn.recv(1024): pass
+            while conn.recv(1024):
+                pass
         except:
             pass
