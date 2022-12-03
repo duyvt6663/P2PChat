@@ -223,14 +223,14 @@ class GUI:
     #####################################################################
     def display_logout_but(self):
         self.logout_but = Frame()
-        Label(self.logout_but, text=self.username.get()).pack(
+        Label(self.logout_but, text=self.client.nickname).pack(
             side='left', padx=10)
         Button(self.logout_but, text="Log out", width=10,
                command=self.log_out).pack(side='left')
         self.logout_but.pack(anchor='nw')
 
     def log_out(self):
-        thread = Thread(target=ClientProc.logoutThread, daemon=True)
+        thread = Thread(target=ClientProc.logoutThread, args=(self.client,), daemon=True)
         thread.start()
         self.login_ui()
 
@@ -273,45 +273,40 @@ class GUI:
 
     # ------------------------- ENTRY CHAT UI ---------------------------
     #####################################################################
-    def display_chat_entry_box(self):
+    def display_chat_entry_box(self, peerID=-1):
         self.entryframe = Frame()
         Label(self.entryframe, text='Enter message:', font=(
             "Serif", 12)).pack(side='top', anchor='w')
-        self.enter_text_widget = Text(
-            self.entryframe, width=60, height=3, font=("Serif", 12))
+        self.enter_text_widget = Text(self.entryframe, width=60, height=3, font=("Serif", 12))
         self.enter_text_widget.pack(side='left', pady=15)
-        self.enter_text_widget.bind('<Return>', self.on_enter_key_pressed)
+        if peerID != -1:
+            self.enter_text_widget.bind('<Return>', lambda event, peerID: self.on_enter_key_pressed(peerID))
         self.entryframe.pack(side='top')
 
-    def on_enter_key_pressed(self, event):
-        self.send_chat()
+    def on_enter_key_pressed(self, peerID):
+        self.send_chat(peerID)
         self.clear_text()
 
     def clear_text(self):
         self.enter_text_widget.delete(1.0, 'end')
 
-    def send_chat(self):
+    def send_chat(self, peerID):
         senders_name = self.username.get().strip() + ": "
-        conn = self.peers[self.target]
         data = self.enter_text_widget.get(1.0, 'end').strip()
-        if data.split(' ')[0] == '\\file_transfer':
-            path = data.split(' ')[1]
-            self.file_transfer(conn, path)
-            msg = 'Ban da gui file cho ' + self.target + ' '
-            self.insertchatbox(msg)
-            self.chat_history[self.target] += [msg]
-            return 'break'
+        # if data.split(' ')[0] == '\\file_transfer':
+        #     path = data.split(' ')[1]
+        #     self.file_transfer(conn, path)
+        #     msg = 'Ban da gui file cho ' + self.target + ' '
+        #     self.insertchatbox(msg)
+        #     self.chat_history[self.target] += [msg]
+        #     return 'break'
         msg = (senders_name + data)
         self.insertchatbox(msg)
-        if self.target not in self.chat_history:
-            self.chat_history[self.target] = []
-        self.chat_history[self.target] += [msg]
+        self.client.chatSessions[peerID] += [msg]
 
-        message = (self.MESSAGE, (self.username.get(), msg))
-        self.sendMessage(conn, message)
+        thread = Thread(target=ClientProc.sendChatThread, args=(self.client, msg, peerID), daemon=True)
+        thread.start()
         self.enter_text_widget.delete(1.0, 'end')
-        # print(self.chat_history)
-        return 'break'
 
     # ------------------------- CHAT BOX UI -----------------------------
     #####################################################################
@@ -340,36 +335,35 @@ class GUI:
         if self.chatframe:
             self.chatframe.pack_forget()
         self.display_chat_box(sessionID)
-        self.display_chat_entry_box()
+        self.display_chat_entry_box(sessionID)
 
-    def wait_connect(self, so, username):
-        so.listen(5)
-        so.settimeout(120)
-        try:
-            conn, addr = so.accept()
-            self.peers[username] = conn
-            if username not in self.chat_history:
-                self.chat_history[username] = []
-            t = Thread(target=self.receive_message_from_peer,
-                       args=(username,), daemon=True)
-            t.start()
-        except:
-            return
-
-    def accept_session(self, username, ip, port):
-        print(username, ip, port)
-        so = socket(AF_INET, SOCK_STREAM)
-        # try:
-        so.connect((ip, port))
-        self.peers[username] = so
-        if username not in self.chat_history:
-            self.chat_history[username] = []
-
-        t = Thread(target=self.receive_message_from_peer,
-                   args=(username,), daemon=True)
-        t.start()
-        # except:
-        #     print('Không thể connect tới',username)
+    # def wait_connect(self, so, username):
+    #     so.listen(5)
+    #     so.settimeout(120)
+    #     try:
+    #         conn, addr = so.accept()
+    #         self.peers[username] = conn
+    #         if username not in self.chat_history:
+    #             self.chat_history[username] = []
+    #         t = Thread(target=self.receive_message_from_peer,
+    #                    args=(username,), daemon=True)
+    #         t.start()
+    #     except:
+    #         return
+    # def accept_session(self, username, ip, port):
+    #     print(username, ip, port)
+    #     so = socket(AF_INET, SOCK_STREAM)
+    #     # try:
+    #     so.connect((ip, port))
+    #     self.peers[username] = so
+    #     if username not in self.chat_history:
+    #         self.chat_history[username] = []
+    #
+    #     t = Thread(target=self.receive_message_from_peer,
+    #                args=(username,), daemon=True)
+    #     t.start()
+    #     # except:
+    #     #     print('Không thể connect tới',username)
 
     def recv(self, conn):
         msg = b''
@@ -416,24 +410,24 @@ class GUI:
                 self.insertchatbox(msg)
                 self.chat_history[username] += [msg]
 
-    def receive_message_from_server(self):
-        while True:
-            msg = self.recv(self.serverSocket)
-            if msg is None:
-                print('Mất kết nối với server')
-                break
-            header, args = pickle.loads(msg)
-            if header == self.FRIENDS_LIST:
-                self.client.friends = args[0]
-                self.update_friend_box()
-            elif header == self.REQUEST_CONNECTION:
-                op = args[0]
-                if messagebox.askokcancel("Connect request", "Request connection from "+op):
-                    self.target = op
-                    self.accept_session(*args)
-                else:
-                    print('reject kết nối từ', op)
-        self.serverSocket.close()
+    # def receive_message_from_server(self):
+    #     while True:
+    #         msg = self.recv(self.serverSocket)
+    #         if msg is None:
+    #             print('Mất kết nối với server')
+    #             break
+    #         header, args = pickle.loads(msg)
+    #         if header == self.FRIENDS_LIST:
+    #             self.client.friends = args[0]
+    #             self.update_friend_box()
+    #         elif header == self.REQUEST_CONNECTION:
+    #             op = args[0]
+    #             if messagebox.askokcancel("Connect request", "Request connection from "+op):
+    #                 self.target = op
+    #                 self.accept_session(*args)
+    #             else:
+    #                 print('reject kết nối từ', op)
+    #     self.serverSocket.close()
 
     def file_transfer(self, conn, file_path):
         file = open(file_path, 'rb')

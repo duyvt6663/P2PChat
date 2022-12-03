@@ -3,7 +3,7 @@ from Synchronization import  ReadWriteLock
 
 #def updateHashMap(username):
 
-def getFriends(username, clients,lock):
+def getFriends(username, clients, lock):
     lock.acquire_read()
     with open('HMap.json', 'r') as openfile:
         hashmap = json.load(openfile)
@@ -12,10 +12,10 @@ def getFriends(username, clients,lock):
         users = json.load(openfile)
     lock.release_read()
     res = []
-    for i in users[id]['friends']:
-        res.append({'id': i,
-                    'nickname': users[i]['nickname'],
-                    'status': 'ONLINE' if hashmap[username] in clients else 'OFFLINE'})
+    for friendID in users[id]['friends']:
+        res.append({'id': friendID,
+                    'nickname': users[friendID]['nickname'],
+                    'status': 'ONLINE' if friendID in clients else 'OFFLINE'})
     return res
 
 def writeToStorage(new_data, lock, filename='Users.json'):

@@ -31,13 +31,8 @@ def updateStatus(id, type=RepTag.ONLINE):
             for conn in clients[friend]: # all instances of a friend
                 conn.send(json.dumps({'type': type,
                                       'friend': id}).encode('utf-8'))
-
 # broadcast status of a session
 def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
-    lock.acquire_read()
-    with open('Users.json', 'r') as file:
-        users = json.load(file)
-    lock.release_read()
     clients[srcID].send(json.dumps({
         'type': type,
         'with': destID,
@@ -102,15 +97,17 @@ def signup(conn, client):
         'password': client['password']
     }, lock)
     msg = {'type': RepTag.SIGNUP_SUCCESS,
+           'id': hashmap[client['username']],
            'friendlist': []}
     conn.send(json.dumps(msg).encode('utf-8'))  # notify success
 
 # post signup/login update
-def updateUser(id):
+def updateUser(conn, id):
     # add id to client list; can log in multiple instances simultaneously
     if id not in clients:
         clients[id] = []
-    clients[id].append(conn)
+    if conn not in clients[id]:
+        clients[id].append(conn)
     # broadcast online status to online friends
     updateStatus(id)
 
@@ -131,7 +128,7 @@ def disconnect(conn, id):
 
 
 # peer handling function
-def peerConnection(conn,addr):
+def peerConnection(conn, addr):
     # state handling
     id = -1 # default id
     while True:
@@ -140,7 +137,7 @@ def peerConnection(conn,addr):
             data = json.loads(data.decode('utf-8'))
         except:
             disconnect(conn, id)
-            print(f'Disconnected to: ',addr[0], ':', str(addr[1]))
+            print(f'Disconnected to: ', addr[0], ':', str(addr[1]))
             return
         try:
             # always authenticate by login or sign up first due to no session token
@@ -150,21 +147,27 @@ def peerConnection(conn,addr):
                 LoginAuthenSchema().load(data)
                 lock.release_read()
                 friendlist = getFriends(data['username'], clients, lock)
+                id = hashmap[data['username']]
+                lock.acquire_read()
+                with open('Users.json', 'r') as file:
+                    users = json.load(file) # read nickname in
+                lock.release_read()
 
                 conn.send(json.dumps({
                     'type': RepTag.LOGIN_SUCCESS,
+                    'id': id,
+                    'nickname': users[id]['nickname'],
                     'friendlist': friendlist
                 }).encode('utf-8'))  # send back friendlist
 
-                id = hashmap[data['username']]
-                updateUser(id)
+                updateUser(conn, id)
             elif data['type'] == ReqTag.SIGNUP:
                 lock.acquire_read()
                 SignUpSchema().load(data)
                 lock.release_read()
                 signup(conn, data)
                 id = hashmap[data['username']]
-                updateUser(id)
+                updateUser(conn, id)
             elif data['type'] == ReqTag.SESSION_OPEN:
                 destID = SessionSchema().load(data)['destID']
                 createSession(addr,id,destID)
@@ -182,7 +185,6 @@ def peerConnection(conn,addr):
                 destID = SessionSchema().load(data)['destID']
                 incrementSession(id,destID,-1)
             elif data['type'] == ReqTag.LOGOUT: # logout, update status
-                clients[id].remove(conn)
                 updateStatus(id,RepTag.OFFLINE)
                 id = -1
             else: # disconnect or gibberish data

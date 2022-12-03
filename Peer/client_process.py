@@ -1,5 +1,7 @@
 # sample code
+import socket
 from socket import *
+import errno
 import time
 from threading import Thread, Lock
 import random
@@ -9,7 +11,7 @@ from tkinter import messagebox
 import json
 import pickle
 # from Server.utils import getFriends, writeToStorage
-from Deserializer import ReqTag, RepTag
+from Deserializer import ReqTag, RepTag, RepData
 
 # lock = ReadWriteLock()
 #online_peers = {}
@@ -23,14 +25,16 @@ class ClientProc():
     def __init__(self, HOST, PORT, GUI):
         self.friends = []
         self.chatSessions = {}
+        self.id = -1
+        self.nickname = ''
         # socket to connect to main server
         self.cServer = socket(AF_INET, SOCK_STREAM)
+        self.cServer.settimeout(2)
         self.cServer.connect((SHOST, SPORT))
-        self.cServer.setblocking(False)
-        self.cServer.settimeout(5)
+
         # set client thread listening to main server
         sthread = Thread(target=self.listeninServerThread,
-                         args=(self, GUI), daemon=True)
+                         args=(GUI,), daemon=True)
         sthread.start()
 
     def loginThread(self, username, password, success):
@@ -53,6 +57,8 @@ class ClientProc():
             if data['type'] == RepTag.LOGIN_SUCCESS:
                 # login success
                 self.friends = data['friendlist']
+                self.id = data['id']
+                self.nickname = data['nickname']
                 # adding gibberish to indicate success
                 success.append('324hi2932jj')
         except Exception as e:
@@ -99,41 +105,64 @@ class ClientProc():
         lock.acquire()
         self.cServer.send(json.dumps(msg).encode('utf-8'))
         lock.release()
+    def sendChatThread(self, message, peerID):
+        msg = {
+            'type': RepData.MESSAGE,
+            'src': self.id,
+            'data': message
+        }
+        client = socket(AF_INET, SOCK_STREAM)
+        for friend in self.friends:
+            if friend['id'] == peerID:
+                client.connect((friend['ip'], friend['port']))
+                lock.acquire()
+                client.send(json.dumps(msg).encode('utf-8'))
+                lock.release()
+
+    def updateAddress(self, friendID, ip, port):
+        for friend in self.friends:
+            if friend['id'] == friendID:
+                friend['ip'] = ip
+                friend['port'] = port
 
     def listeninServerThread(self, GUI):
         while True:
             try:
                 data = self.cServer.recv(1024)
                 data = json.loads(data.decode('utf-8'))
-            except:
-                print('Disconnected to server')
+            except OSError: # catch time out here
+                continue
+            except Exception as e:
+                # Something else happened, handle error, exit, etc.
+                print(repr(e))
                 return
             try:
                 # do friend status update
                 if data['type'] == RepTag.ONLINE:
-                    for i in self.friends:
-                        if self.friends[i]['id'] == data['id']:
-                            self.friends[i]['status'] = 'ONLINE'
+                    for friend in self.friends:
+                        if friend['id'] == data['friend']:
+                            friend['status'] = 'ONLINE'
                             GUI.update_friend_box()
                 elif data['type'] == RepTag.OFFLINE:
-                    for i in self.friends:
-                        if self.friends[i]['id'] == data['id']:
-                            self.friends[i]['status'] = 'OFFLINE'
+                    for friend in self.friends:
+                        if friend['id'] == data['friend']:
+                            friend['status'] = 'OFFLINE'
                             GUI.update_friend_box()
                 elif data['type'] == ReqTag.SESSION_OPEN:
                     flag = False
-                    for i in self.friends:
-                        if self.friends[i]['id'] == data['destID']:
+                    for friend in self.friends:
+                        if friend['id'] == data['id']:
                             flag = True
                             msg = {
                                 'type': RepTag.SESSION_ACCEPT,
-                                'destID': data['destID']
+                                'destID': data['id']
                             }
-                            self.chatSessions[data['destID']] = ['--- SESSION INITIATED ---']
+                            self.chatSessions[data['id']] = ['--- SESSION INITIATED ---']
+                            self.updateAddress(data['id'], data['ip'], data['port'])
                     if not flag:
                         msg = {
                             'type': RepTag.SESSION_REJECT,
-                            'destID': data['destID']
+                            'destID': data['id']
                         }
                     self.cServer.send(json.dumps(msg).encode('utf-8'))
                 elif data['type'] == ReqTag.SESSION_CLOSE:
