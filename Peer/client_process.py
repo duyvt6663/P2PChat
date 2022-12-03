@@ -23,9 +23,6 @@ class ClientProc():
     def __init__(self, HOST, PORT, GUI):
         self.friends = []
         self.chatSessions = {}
-        # socket to connect to server proc
-        self.pServer = socket(AF_INET, SOCK_STREAM)
-        self.pServer.connect((HOST, PORT))
         # socket to connect to main server
         self.cServer = socket(AF_INET, SOCK_STREAM)
         self.cServer.connect((SHOST, SPORT))
@@ -35,9 +32,6 @@ class ClientProc():
         sthread = Thread(target=self.listeninServerThread,
                          args=(self, GUI), daemon=True)
         sthread.start()
-        # set client thread listening to server proc/other peers
-        pthread = Thread(target=self.listeninPeerThread, daemon=True)
-        pthread.start()
 
     def loginThread(self, username, password, success):
         try:
@@ -145,22 +139,6 @@ class ClientProc():
                 elif data['type'] == ReqTag.SESSION_CLOSE:
                     if data['with'] in self.chatSessions and data['tag'] == 'COMPLETELY':
                         self.chatSessions.pop(data['with'])
-            except Exception as e:
-                print(repr(e))
-
-    def listeninPeerThread(self):
-        # message passed down from server proc
-        while True:
-            try:
-                data = self.pServer.recv(1024)
-                data = json.loads(data.decode('utf-8'))
-            except:
-                print('Disconnected to server')
-                return
-            try:
-                # excluding login, session-related response,
-                # only do serverProc msg and friend status update
-                print('hello')
             except Exception as e:
                 print(repr(e))
 

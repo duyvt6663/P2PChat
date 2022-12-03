@@ -21,3 +21,10 @@ class ReqTag(str,Enum): # request tag
     SESSION_REJECT = 'SRJ'
     SESSION_ACCEPT = 'SAT'
     DISCONNECT = 'DIS'
+class RepData(str,Enum): # either message or file
+    MESSAGE = 'MSG'
+    FILE = 'FIL'
+class peerMessage(Schema):
+    type = EnumField(RepData, by_value=True)
+    src = fields.Int()
+    data = fields.Str()

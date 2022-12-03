@@ -7,30 +7,33 @@ import random
 from os import listdir
 from tkinter import *
 from tkinter import messagebox
+from Deserializer import peerMessage, RepData
+import json
 
 
 class ServerProc:
-    def __init__(self, HOST, PORT):
+    def __init__(self, HOST, PORT, client):
         thread = Thread(target=self.mainThread,args=(HOST,PORT))
         thread.start()
 
-    def mainThread(self, HOST, PORT):
+    def mainThread(self, HOST, PORT, client):
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind((HOST, PORT))
         self.server.listen(10)  # blocking function -> different thread
-        # accept client proc to communicate
-        self.clientSocket, _ = self.server.accept()
         while True:
             conn, addr = self.server.accept()
             print('Connected to: ', str(addr[0]), ': ', str(addr[1]))
-            t = Thread(target=self.listeninThread, args=(conn,), daemon=True)
+            t = Thread(target=self.listeninPeerThread, args=(conn, client), daemon=True)
             t.start()
 
-    def listeninThread(self, conn):
+    def listeninPeerThread(self, conn, client):
         while True:
             try:
-                message = conn.recv(1024)
-                self.clientSocket.send(message)
+                msg = conn.recv(1024)
+                msg = json.loads(msg.decode('utf-8'))
             except:
                 conn.close()
                 break
+            peerMessage().loads(msg)
+            if msg['type'] == RepData.MESSAGE:
+
