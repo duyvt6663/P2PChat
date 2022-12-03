@@ -6,7 +6,8 @@ import random
 from os import listdir
 from tkinter import *
 from tkinter import messagebox
-import json, pickle
+import json
+import pickle
 # from Server.utils import getFriends, writeToStorage
 from Deserializer import ReqTag, RepTag
 
@@ -16,8 +17,10 @@ from Deserializer import ReqTag, RepTag
 SHOST = 'localhost'
 SPORT = 12345
 lock = Lock()
+
+
 class ClientProc():
-    def __init__(self,HOST,PORT):
+    def __init__(self, HOST, PORT):
         self.friends = []
         self.chatSessions = {}
         # socket to connect to server proc
@@ -55,7 +58,8 @@ class ClientProc():
             if data['type'] == RepTag.LOGIN_SUCCESS:
                 # login success
                 self.friends = data['friendlist']
-                success.append('324hi2932jj') # adding gibberish to indicate success
+                # adding gibberish to indicate success
+                success.append('324hi2932jj')
         except Exception as e:
             print(repr(e))
 
@@ -79,7 +83,8 @@ class ClientProc():
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.SIGNUP_SUCCESS:
                 # signup success
-                success.append('hkdhfewo')  # adding gibberish to indicate success
+                # adding gibberish to indicate success
+                success.append('hkdhfewo')
         except Exception as e:
             print(repr(e))
 
@@ -111,13 +116,14 @@ class ClientProc():
                 return
             try:
                 print('hello')
-                # excluding login, session-related response,
-                # only do serverProc msg and friend status update
-                if data['type'] == RepTag.ONLINE and self.friends['id'] == data['friend']:
-                    self.friends['status'] = 'ONLINE'
-                #elif data == 
-                
-                #print('hello')
+                if data['type'] == RepTag.ONLINE:
+                    for i in self.friends:
+                        if self.friends[i]['id'] == data['id']:
+                            self.friends[i]['status'] = 'ONLINE'
+                elif data['type'] == RepTag.OFFLINE:
+                    for i in self.friends:
+                        if self.friends[i]['id'] == data['id']:
+                            self.friends[i]['status'] = 'OFFLINE'
             except Exception as e:
                 print(repr(e))
 
