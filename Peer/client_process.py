@@ -19,12 +19,15 @@ lock = Lock()
 class ClientProc():
     def __init__(self,HOST,PORT):
         self.friends = []
+        self.chatSessions = {}
         # socket to connect to server proc
         self.pServer = socket(AF_INET, SOCK_STREAM)
         self.pServer.connect((HOST, PORT))
         # socket to connect to main server
         self.cServer = socket(AF_INET, SOCK_STREAM)
         self.cServer.connect((SHOST, SPORT))
+        self.cServer.setblocking(False)
+        self.cServer.settimeout(5)
         # set client thread listening to main server
         sthread = Thread(target=self.listeninServerThread, daemon=True)
         sthread.start()
@@ -87,13 +90,21 @@ class ClientProc():
         self.cServer.send(json.dumps(msg).encode('utf-8'))
         lock.release()
 
+    def openSessionThread(self, peerID):
+        # set message to request session
+        msg = {
+            'type': ReqTag.SESSION_OPEN,
+            'destID': peerID
+        }
+        lock.acquire()
+        self.cServer.send(json.dumps(msg).encode('utf-8'))
+        lock.release()
+
     def listeninServerThread(self):
         # do friend status update
         while True:
             try:
-                lock.acquire()
                 data = self.cServer.recv(1024)
-                lock.release()
                 data = json.loads(data.decode('utf-8'))
             except:
                 print('Disconnected to server')
@@ -114,9 +125,7 @@ class ClientProc():
         # message passed down from server proc
         while True:
             try:
-                lock.acquire()
                 data = self.pServer.recv(1024)
-                lock.release()
                 data = json.loads(data.decode('utf-8'))
             except:
                 print('Disconnected to server')

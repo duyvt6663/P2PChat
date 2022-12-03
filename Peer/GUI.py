@@ -47,6 +47,7 @@ class GUI:
         # init server and client processes
         self.HOST = '127.0.0.1'  # server proc host
         self.PORT = random.randint(1024, 49151) # server proc port
+        # run server proc
         self.server = ServerProc(self.HOST, self.PORT)
         # take a client socket to connect to server proc, and recv msg + file
         self.client = ClientProc(self.HOST, self.PORT)
@@ -124,7 +125,6 @@ class GUI:
         t = Thread(target=ClientProc.loginThread, args=(self.client, username, password, flag))
         t.start()
         t.join()
-
         if not flag: # flag not changed -> server not responding/ error/ wrong login info
             messagebox.showinfo('Message', 'Username or password is invalid')
             self.username.config(state='normal')
@@ -258,10 +258,10 @@ class GUI:
         self.friend_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
         self.frframe.pack(side='left')
-        self.targets = StringVar(self.friend_area, '')
+        self.targets = IntVar(self.friend_area, -1)
         for friend in self.client.friends:
             Radiobutton(self.friend_area, text=str((friend['nickname'], friend['status'])),
-                        variable=self.targets, value=friend['nickname'], width=30,
+                        variable=self.targets, value=friend['id'], width=30,
                         state=DISABLED if friend['status'] == 'OFFLINE' else NORMAL,
                         background="light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
     def update_friend_box(self):
@@ -270,28 +270,22 @@ class GUI:
         self.friend_area.pack(side='left', padx=10)
         for friend in self.client.friends:
             Radiobutton(self.friend_area, text=str((friend['nickname'], friend['status'])),
-                        variable=self.targets, value=friend['nickname'], width=30,
+                        variable=self.targets, value=friend['id'], width=30,
                         state=DISABLED if friend['status'] == 'OFFLINE' else NORMAL,
                         background="light blue", command=self.request_session).pack(side='top', fill=X, ipady=5)
     def request_session(self):
-        username = self.targets.get()
-        if username in self.peers:
+        peerID = self.targets.get()
+        if peerID in self.client.chatSessions:
+            # switch the current chat box to the session
             return
-        if self.client.friends[username][2] == 'OFFLINE':
-            messagebox.showinfo('Message', 'The user if offline!')
-            return
-        self.target = username
-        so,(ip,port) = self.createSocket()
-        msg = ('REQUEST_CONNECTION', (username,ip,port))
-        self.sendMessage(self.serverSocket,msg)
+        self.target = peerID  # current chat friend
+        thread = Thread(target=ClientProc.openSessionThread, args=(self.client, peerID), daemon=True)
+        thread.start()
         self.reset_chatbox()
-        print(ip,port)
-        t = Thread(target=self.wait_connect,args = (so,username), daemon = True)
-        t.start()
 
     # ------------------------- chat box UI -----------------------------
     #####################################################################
-    def display_chat_box(self):
+    def display_chat_box(self, sessionID=-1):
         self.chatframe = Frame()
         Label(self.chatframe, text='Chat Box:', font=("Serif", 12)).pack(side='top', anchor='w')
         self.chat_transcript_area = Text(self.chatframe, width=60, height=10, font=("Serif", 12))
@@ -301,6 +295,8 @@ class GUI:
         self.chat_transcript_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
         self.chatframe.pack(side='top')
+        if sessionID == -1:
+            return
         if self.target in self.chat_history:
             for msg in self.chat_history[self.target]:
                 self.insertchatbox(msg)
@@ -308,11 +304,13 @@ class GUI:
     def insertchatbox(self, msg):
         self.chat_transcript_area.insert('end', msg + '\n')
         self.chat_transcript_area.yview(END)
-
-
-
-
-
+    def reset_chatbox(self):
+        if self.entryframe:
+            self.entryframe.pack_forget()
+        if self.chatframe:
+            self.chatframe.pack_forget()
+        self.display_chat_box()
+        self.display_chat_entry_box()
 
     def wait_connect(self,so,username):
         so.listen(5)
@@ -417,11 +415,6 @@ class GUI:
         msg = (self.FILE_TRANSFER,(filename,data))
         self.sendMessage(conn,msg)
 
-
-
-
-
-
     def on_close_window(self):
         if messagebox.askokcancel("Quit", "Do you want to quit?"):
             self.root.destroy()
@@ -429,11 +422,7 @@ class GUI:
             #self.server.close()
             exit(0)
 
-    def reset_chatbox(self):
-        if self.entryframe:self.entryframe.pack_forget()
-        if self.chatframe: self.chatframe.pack_forget()
-        self.display_chat_box()
-        self.display_chat_entry_box()
+
 
     def clear_buffer(self, conn):
         try:
