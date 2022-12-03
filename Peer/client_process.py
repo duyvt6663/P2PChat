@@ -100,6 +100,13 @@ class ClientProc():
                 return
             try:
                 print('hello')
+                # excluding login, session-related response,
+                # only do serverProc msg and friend status update
+                if data['type'] == RepTag.ONLINE and self.friends['id'] == data['friend']:
+                    self.friends['status'] = 'ONLINE'
+                #elif data == 
+                
+                #print('hello')
             except Exception as e:
                 print(repr(e))
 
