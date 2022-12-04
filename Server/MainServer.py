@@ -34,17 +34,19 @@ def updateStatus(id, type=RepTag.ONLINE):
 # broadcast status of a session
 def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
     if srcID in clients:
-        clients[srcID].send(json.dumps({
-            'type': type,
-            'with': destID,
-            'status': tag
-        }).encode('utf-8'))
+        for conn in clients[srcID]:
+            conn.send(json.dumps({
+                'type': type,
+                'with': destID,
+                'status': tag
+            }).encode('utf-8'))
     if destID in clients:
-        clients[destID].send(json.dumps({
-            'type': type,
-            'with': srcID,
-            'status': tag
-        }).encode('utf-8'))
+        for conn in clients[destID]:
+            conn.send(json.dumps({
+                'type': type,
+                'with': srcID,
+                'status': tag
+            }).encode('utf-8'))
 
 # create session
 def createSession(addr,srcID,destID,tag=ReqTag.SESSION_OPEN):

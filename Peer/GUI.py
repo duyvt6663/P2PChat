@@ -51,7 +51,7 @@ class GUI:
         # take a client socket to connect to server proc, and recv msg + file
         self.client = ClientProc(self.HOST, self.PORT, self)
         # run server proc
-        self.server = ServerProc(self.HOST, self.PORT, self.client)
+        self.server = ServerProc(self.HOST, self.PORT, self.client, self)
 
     def init_frame(self):
         # init or reset login/signup frame
@@ -283,7 +283,7 @@ class GUI:
         self.enter_text_widget.delete(1.0, 'end')
 
     def send_chat(self, peerID):
-        senders_name = self.username.get().strip() + ": "
+        senders_name = self.client.nickname.strip() + ": "
         data = self.enter_text_widget.get(1.0, 'end').strip()
         # if data.split(' ')[0] == '\\file_transfer':
         #     path = data.split(' ')[1]

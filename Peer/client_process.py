@@ -183,7 +183,7 @@ class ClientProc():
                             GUI.reset_chatbox(data['id'])
 
                 elif data['type'] == ReqTag.SESSION_CLOSE:
-                    if data['with'] in self.chatSessions and data['tag'] == 'COMPLETELY':
+                    if data['with'] in self.chatSessions and data['status'] == 'COMPLETELY':
                         self.chatSessions.pop(data['with'])
             except Exception as e:
                 print(repr(e))
