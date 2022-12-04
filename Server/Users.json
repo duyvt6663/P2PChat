@@ -13,7 +13,9 @@
         "username": "han",
         "password": "han",
         "friends": [
-            0, 2
+            0,
+            2,
+            3
         ]
     },
     {
@@ -22,7 +24,22 @@
         "password": "asd",
         "friends": [
             0,
-            1
+            1,
+            3
         ]
+    },
+    {
+        "nickname": "White woman",
+        "username": "arc",
+        "password": "arc",
+        "friends": [
+            1,
+            2
+        ]
+    },
+    {
+        "nickname": "Jimpansy",
+        "username": "hol",
+        "password": "hol"
     }
 ]
