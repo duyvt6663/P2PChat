@@ -26,5 +26,7 @@ class RepData(str,Enum): # either message or file
     FILE = 'FIL'
 class peerMessage(Schema):
     type = EnumField(RepData, by_value=True)
-    src = fields.Int()
-    data = fields.Str()
+    src = fields.Int(required=True)
+    data = fields.Str(required=True)
+    class Meta:
+        strict=True

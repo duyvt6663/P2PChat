@@ -7,7 +7,7 @@ import threading
 from threading import Thread
 # import serializer
 from Deserializer import RequestSchema, ClientSchema, SignUpSchema, \
-    LoginAuthenSchema, SessionSchema, ReqTag, RepTag
+    LoginAuthenSchema, SessionSchema, BriefSessionSchema, ReqTag, RepTag
 from utils import getFriends, writeToStorage
 from Synchronization import ReadWriteLock
 
@@ -33,16 +33,18 @@ def updateStatus(id, type=RepTag.ONLINE):
                                       'friend': id}).encode('utf-8'))
 # broadcast status of a session
 def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
-    clients[srcID].send(json.dumps({
-        'type': type,
-        'with': destID,
-        'status': tag
-    }).encode('utf-8'))
-    clients[destID].send(json.dumps({
-        'type': type,
-        'with': srcID,
-        'status': tag
-    }).encode('utf-8'))
+    if srcID in clients:
+        clients[srcID].send(json.dumps({
+            'type': type,
+            'with': destID,
+            'status': tag
+        }).encode('utf-8'))
+    if destID in clients:
+        clients[destID].send(json.dumps({
+            'type': type,
+            'with': srcID,
+            'status': tag
+        }).encode('utf-8'))
 
 # create session
 def createSession(addr,srcID,destID,tag=ReqTag.SESSION_OPEN):
@@ -168,26 +170,33 @@ def peerConnection(conn, addr):
                 signup(conn, data)
                 id = hashmap[data['username']]
                 updateUser(conn, id)
+
             elif data['type'] == ReqTag.SESSION_OPEN:
-                destID = SessionSchema().load(data)['destID']
-                createSession(addr,id,destID)
+                SessionSchema().load(data)
+                createSession((data['ip'], data['port']), id, data['destID'])
+
             elif data['type'] == ReqTag.SESSION_REJECT:
-                destID = SessionSchema().load(data)['destID']
+                destID = BriefSessionSchema().load(data)['destID']
                 conn.send(json.dumps(data).encode('utf-8'))
                 updateSession(id,destID)
                 # pop session
                 sessions.pop((destID,id))
                 sessions.pop((id,destID))
+
             elif data['type'] == ReqTag.SESSION_ACCEPT:
-                destID = SessionSchema().load(data)['destID']
-                createSession(addr, id, destID, ReqTag.SESSION_ACCEPT)
+                SessionSchema().load(data)
+                createSession((data['ip'], data['port']), id, data['destID'],
+                              ReqTag.SESSION_ACCEPT)
+
             elif data['type'] == ReqTag.SESSION_CLOSE:
                 destID = SessionSchema().load(data)['destID']
                 incrementSession(id,destID,-1)
+
             elif data['type'] == ReqTag.LOGOUT: # logout, update status
                 updateStatus(id,RepTag.OFFLINE)
                 id = -1
-            else: # disconnect or gibberish data
+
+            else:  # disconnect or gibberish data
                 # request close all related sessions and update status
                 disconnect(conn, id)
                 conn.close()

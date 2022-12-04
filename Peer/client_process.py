@@ -27,6 +27,8 @@ class ClientProc():
         self.chatSessions = {}
         self.id = -1
         self.nickname = ''
+        self.HOST = HOST  # server proc HOST
+        self.PORT = PORT  # server proc PORT
         # socket to connect to main server
         self.cServer = socket(AF_INET, SOCK_STREAM)
         self.cServer.settimeout(2)
@@ -100,7 +102,9 @@ class ClientProc():
         # set message to request session
         msg = {
             'type': ReqTag.SESSION_OPEN,
-            'destID': peerID
+            'destID': peerID,
+            'ip': self.HOST,
+            'port': self.PORT
         }
         lock.acquire()
         self.cServer.send(json.dumps(msg).encode('utf-8'))
@@ -115,9 +119,8 @@ class ClientProc():
         for friend in self.friends:
             if friend['id'] == peerID:
                 client.connect((friend['ip'], friend['port']))
-                lock.acquire()
                 client.send(json.dumps(msg).encode('utf-8'))
-                lock.release()
+                client.close()
 
     def updateAddress(self, friendID, ip, port):
         for friend in self.friends:
@@ -155,9 +158,12 @@ class ClientProc():
                             flag = True
                             msg = {
                                 'type': RepTag.SESSION_ACCEPT,
-                                'destID': data['id']
+                                'destID': data['id'],
+                                'ip': self.HOST,
+                                'port': self.PORT
                             }
-                            self.chatSessions[data['id']] = ['--- SESSION INITIATED ---']
+                            if data['id'] not in self.chatSessions:
+                                self.chatSessions[data['id']] = ['--- SESSION INITIATED ---']
                             self.updateAddress(data['id'], data['ip'], data['port'])
                     if not flag:
                         msg = {
@@ -165,6 +171,17 @@ class ClientProc():
                             'destID': data['id']
                         }
                     self.cServer.send(json.dumps(msg).encode('utf-8'))
+                elif data['type'] == RepTag.SESSION_ACCEPT:
+                    self.updateAddress(data['id'], data['ip'], data['port'])
+                    # insert into 1st position of chat session
+                    if data['id'] not in self.chatSessions:
+                        self.chatSessions[data['id']] = ['--- SESSION INITIATED ---']
+                    else:
+                        self.chatSessions[data['id']].insert(0, '--- SESSION INITIATED ---')
+                        # reset chat box if sender is current chat friend
+                        if GUI.currChatFriend.get() == data['id']:
+                            GUI.reset_chatbox(data['id'])
+
                 elif data['type'] == ReqTag.SESSION_CLOSE:
                     if data['with'] in self.chatSessions and data['tag'] == 'COMPLETELY':
                         self.chatSessions.pop(data['with'])

@@ -156,26 +156,18 @@ class GUI:
         self.hide_frame()
         self.init_frame()
 
-        Label(self.userframe, text='Username:', font=(
-            "Helvetica", 13)).pack(side='left', padx=10)
+        Label(self.userframe, text='Username:', font=("Helvetica", 13)).pack(side='left', padx=10)
         self.username = Entry(self.userframe, width=40, borderwidth=2)
         self.username.pack(side='left', anchor='e')
-        Label(self.passframe, text='Password:', font=(
-            "Helvetica", 13)).pack(side='left', padx=10)
-        self.password = Entry(self.passframe, show='*',
-                              width=40, borderwidth=2)
+        Label(self.passframe, text='Password:', font=("Helvetica", 13)).pack(side='left', padx=10)
+        self.password = Entry(self.passframe, show='*', width=40, borderwidth=2)
         self.password.pack(side='left', anchor='e')
-        Label(self.nickframe, text='Nickname:', font=(
-            "Helvetica", 13)).pack(side='left', padx=10)
-        self.nickname = Entry(self.nickframe, show='*',
-                              width=40, borderwidth=2)
+        Label(self.nickframe, text='Nickname:', font=("Helvetica", 13)).pack(side='left', padx=10)
+        self.nickname = Entry(self.nickframe, show='*', width=40, borderwidth=2)
         self.nickname.pack(side='left', anchor='e')
-        Button(self.signup_but, text="Sign up", width=10,
-               command=self.sign_up).pack(side='bottom')
-        Label(self.login_but, text='If you already have an account,',
-              font=("Helvetica", 10)).pack(side='left', padx=10)
-        Button(self.login_but, text='Log in', bd=0, fg='blue',
-               command=self.login_ui).pack(side='left')
+        Button(self.signup_but, text="Sign up", width=10, command=self.sign_up).pack(side='bottom')
+        Label(self.login_but, text='If you already have an account,', font=("Helvetica", 10)).pack(side='left', padx=10)
+        Button(self.login_but, text='Log in', bd=0, fg='blue', command=self.login_ui).pack(side='left')
 
         self.userframe.pack(anchor='nw')
         self.passframe.pack(anchor='nw')
@@ -280,7 +272,7 @@ class GUI:
         self.enter_text_widget = Text(self.entryframe, width=60, height=3, font=("Serif", 12))
         self.enter_text_widget.pack(side='left', pady=15)
         if peerID != -1:
-            self.enter_text_widget.bind('<Return>', lambda event, peerID: self.on_enter_key_pressed(peerID))
+            self.enter_text_widget.bind('<Return>', lambda e, peerID=peerID: self.on_enter_key_pressed(peerID))
         self.entryframe.pack(side='top')
 
     def on_enter_key_pressed(self, peerID):
@@ -302,7 +294,10 @@ class GUI:
         #     return 'break'
         msg = (senders_name + data)
         self.insertchatbox(msg)
-        self.client.chatSessions[peerID] += [msg]
+        if peerID not in self.client.chatSessions:
+            self.client.chatSessions[peerID] = [msg]
+        else:
+            self.client.chatSessions[peerID] += [msg]
 
         thread = Thread(target=ClientProc.sendChatThread, args=(self.client, msg, peerID), daemon=True)
         thread.start()

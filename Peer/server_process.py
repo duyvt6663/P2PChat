@@ -13,7 +13,7 @@ import json
 
 class ServerProc:
     def __init__(self, HOST, PORT, client):
-        thread = Thread(target=self.mainThread, args=(HOST, PORT, client))
+        thread = Thread(target=self.mainThread, args=(HOST, PORT, client), daemon=True)
         thread.start()
 
     def mainThread(self, HOST, PORT, client):
@@ -32,11 +32,10 @@ class ServerProc:
                 msg = conn.recv(1024)
                 msg = json.loads(msg.decode('utf-8'))
             except:
-                #
                 return
             try:
                 if msg['type'] == RepData.MESSAGE:
-                    peerMessage().loads(msg)
+                    peerMessage().load(msg)
                     client.chatSessions[msg['id']].append(msg['data'])
                     # update on UI if currently chatting with this friend
 

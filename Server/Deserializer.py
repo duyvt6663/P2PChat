@@ -5,7 +5,7 @@ from marshmallow_enum import EnumField
 import pickle
 
 
-class RepTag(str,Enum): # reply tag
+class RepTag(str,Enum):  # reply tag
     LOGIN_SUCCESS = 'LSS'
     SIGNUP_SUCCESS = 'SSS'
     ONLINE = 'ONL'
@@ -56,6 +56,13 @@ class LoginAuthenSchema(ClientSchema):
             raise ValidationError('Wrong password')
 
 class SessionSchema(RequestSchema):
+    destID = fields.Int(required=True)
+    ip = fields.IP(required=True)
+    port = fields.Int(required=True)
+    class Meta:
+        strict = True
+
+class BriefSessionSchema(RequestSchema):
     destID = fields.Int(required=True)
     class Meta:
         strict = True
