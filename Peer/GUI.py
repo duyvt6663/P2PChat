@@ -18,15 +18,6 @@ class GUI:
     selfSocket = None
     last_received_message = None
 
-    REQUEST_CONNECTION = 'REQUEST_CONNECTION'
-    REJECT_CONNECTION = 'REJECT_CONNECTION'
-    ACCEPT_CONNECTION = 'ACCEPT_CONNECTION'
-    LOGOUT = 'LOGOUT'
-    SIGNUP = 'SIGNUP'
-    FRIENDS_LIST = 'FRIENDS_LIST'
-    FILE_TRANSFER = 'FILE_TRANSFER'
-    MESSAGE = 'MESSAGE'
-
     def __init__(self, master):
         self.root = master  # init GUI tree
         self.chat_transcript_area = None
@@ -35,16 +26,14 @@ class GUI:
         self.chatframe = None
         self.entryframe = None
         self.logout_but = None
-        self.chat_history = {}
+
         self.username = None
         self.password = None
         self.nickname = None
-        self.target = ''  # id of current chat peer
         self.currChatFriend = None
+
         self.init_frame()
         self.init_gui()
-        self.peers = {}
-        self.friends = []
         # init server and client processes
         self.HOST = '127.0.0.1'  # server proc host
         self.PORT = random.randint(1024, 49151)  # server proc port
@@ -332,6 +321,16 @@ class GUI:
         self.display_chat_box(sessionID)
         self.display_chat_entry_box(sessionID)
 
+    # ------------------------- CLOSE WINDOW UI -------------------------
+    #####################################################################
+    def on_close_window(self):
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.root.destroy()
+            exit(0)
+
+    # ------------------------- FILE TRANSFER UI ------------------------
+    #####################################################################
+
     # def wait_connect(self, so, username):
     #     so.listen(5)
     #     so.settimeout(120)
@@ -372,38 +371,38 @@ class GUI:
                 break
         return msg
 
-    def receive_message_from_peer(self, username):
-        while True:
-            conn = self.peers[username]
-            # msg = self.recv(conn)
-            # if msg is None:
-            #     print('Disconnected to ',username)
-            #     return
-            msg = conn.recv(512)
-            header, args = pickle.loads(msg)
-            if header == self.MESSAGE:
-                message = args[1]
-                self.chat_history[username] += [message]
-                print(self.target)
-                if self.target == message.split(':')[0]:
-                    self.insertchatbox(message)
-
-            elif header == self.FILE_TRANSFER:
-                filename = args[0]
-                if filename in listdir(self.path):
-                    file = filename.split('.')
-                    i = 1
-                    filename_i = file[0] + '(' + str(i) + ')' + file[1]
-                    while filename_i in listdir(self.path):
-                        i = i + 1
-                        filename_i = file[0] + '(' + str(i) + ')' + file[1]
-                    filename = filename_i
-                file = open(self.path + '\\' + filename, 'wb')
-                file.write(args[1])
-                file.close()
-                msg = username + ' đã gửi cho bạn ' + filename
-                self.insertchatbox(msg)
-                self.chat_history[username] += [msg]
+    # def receive_message_from_peer(self, username):
+    #     while True:
+    #         conn = self.peers[username]
+    #         # msg = self.recv(conn)
+    #         # if msg is None:
+    #         #     print('Disconnected to ',username)
+    #         #     return
+    #         msg = conn.recv(512)
+    #         header, args = pickle.loads(msg)
+    #         if header == self.MESSAGE:
+    #             message = args[1]
+    #             self.chat_history[username] += [message]
+    #             print(self.target)
+    #             if self.target == message.split(':')[0]:
+    #                 self.insertchatbox(message)
+    #
+    #         elif header == self.FILE_TRANSFER:
+    #             filename = args[0]
+    #             if filename in listdir(self.path):
+    #                 file = filename.split('.')
+    #                 i = 1
+    #                 filename_i = file[0] + '(' + str(i) + ')' + file[1]
+    #                 while filename_i in listdir(self.path):
+    #                     i = i + 1
+    #                     filename_i = file[0] + '(' + str(i) + ')' + file[1]
+    #                 filename = filename_i
+    #             file = open(self.path + '\\' + filename, 'wb')
+    #             file.write(args[1])
+    #             file.close()
+    #             msg = username + ' đã gửi cho bạn ' + filename
+    #             self.insertchatbox(msg)
+    #             self.chat_history[username] += [msg]
 
     # def receive_message_from_server(self):
     #     while True:
@@ -438,10 +437,6 @@ class GUI:
         msg = (self.FILE_TRANSFER, (filename, data))
         self.sendMessage(conn, msg)
 
-    def on_close_window(self):
-        if messagebox.askokcancel("Quit", "Do you want to quit?"):
-            self.root.destroy()
-            exit(0)
 
     def clear_buffer(self, conn):
         try:

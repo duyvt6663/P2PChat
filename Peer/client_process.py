@@ -85,7 +85,9 @@ class ClientProc():
             lock.release()
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.SIGNUP_SUCCESS:
-                # signup success
+                # set nickname
+                self.id = data['id']
+                self.nickname = nickname
                 # adding gibberish to indicate success
                 success.append('hkdhfewo')
         except Exception as e:
@@ -163,6 +165,7 @@ class ClientProc():
                                 'port': self.PORT
                             }
                             if data['id'] not in self.chatSessions:
+                                # init a session cache
                                 self.chatSessions[data['id']] = ['--- SESSION INITIATED ---']
                             self.updateAddress(data['id'], data['ip'], data['port'])
                     if not flag:
@@ -177,6 +180,7 @@ class ClientProc():
                     if data['id'] not in self.chatSessions:
                         self.chatSessions[data['id']] = ['--- SESSION INITIATED ---']
                     else:
+                        # initiation success inserted to slot 0 of cache
                         self.chatSessions[data['id']].insert(0, '--- SESSION INITIATED ---')
                         # reset chat box if sender is current chat friend
                         if GUI.currChatFriend.get() == data['id']:
