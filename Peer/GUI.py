@@ -153,7 +153,7 @@ class GUI:
         self.password = Entry(self.passframe, show='*', width=40, borderwidth=2)
         self.password.pack(side='left', anchor='e')
         Label(self.nickframe, text='Nickname:', font=("Helvetica", 13)).pack(side='left', padx=10)
-        self.nickname = Entry(self.nickframe, show='*', width=40, borderwidth=2)
+        self.nickname = Entry(self.nickframe, width=40, borderwidth=2)
         self.nickname.pack(side='left', anchor='e')
         Button(self.signup_but, text="Sign up", width=10, command=self.sign_up).pack(side='bottom')
         Label(self.login_but, text='If you already have an account,', font=("Helvetica", 10)).pack(side='left', padx=10)
