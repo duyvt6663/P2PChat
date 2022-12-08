@@ -1,4 +1,5 @@
 # sample code
+import socket
 from socket import *
 import pickle
 import time
@@ -35,7 +36,7 @@ class GUI:
         self.init_frame()
         self.init_gui()
         # init server and client processes
-        self.HOST = '127.0.0.1'  # server proc host
+        self.HOST = gethostbyname(gethostname())  # server proc host
         self.PORT = random.randint(1024, 49151)  # server proc port
         # take a client socket to connect to server proc, and recv msg + file
         self.client = ClientProc(self.HOST, self.PORT, self)

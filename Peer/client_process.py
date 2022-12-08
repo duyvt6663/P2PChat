@@ -31,7 +31,7 @@ class ClientProc():
         self.PORT = PORT  # server proc PORT
         # socket to connect to main server
         self.cServer = socket(AF_INET, SOCK_STREAM)
-        self.cServer.settimeout(2)
+        self.cServer.settimeout(7)
         self.cServer.connect((SHOST, SPORT))
 
         # set client thread listening to main server
