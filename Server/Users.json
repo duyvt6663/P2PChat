@@ -40,6 +40,13 @@
     {
         "nickname": "Jimpansy",
         "username": "hol",
-        "password": "hol"
+        "password": "hol",
+        "friends": []
+    },
+    {
+        "nickname": "Tuskini",
+        "username": "fanu",
+        "password": "fanu",
+        "friends": []
     }
 ]

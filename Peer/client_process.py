@@ -16,6 +16,7 @@ from Deserializer import ReqTag, RepTag, RepData
 # lock = ReadWriteLock()
 #online_peers = {}
 
+# SHOST = '10.128.105.211'
 SHOST = 'localhost'
 SPORT = 12345
 lock = Lock()
@@ -31,7 +32,7 @@ class ClientProc():
         self.PORT = PORT  # server proc PORT
         # socket to connect to main server
         self.cServer = socket(AF_INET, SOCK_STREAM)
-        self.cServer.settimeout(7)
+        self.cServer.settimeout(2)
         self.cServer.connect((SHOST, SPORT))
 
         # set client thread listening to main server
@@ -49,7 +50,7 @@ class ClientProc():
             }
             # use main server socket
             lock.acquire()
-            self.cServer.send(json.dumps(msg).encode('utf-8'))
+            self.cServer.sendall(json.dumps(msg).encode('utf-8'))
             lock.release()
             # recv data
             lock.acquire()
@@ -58,7 +59,14 @@ class ClientProc():
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.LOGIN_SUCCESS:
                 # login success
-                self.friends = data['friendlist']
+                if self.id == -1:  # 1st login
+                    self.friends = data['friendlist']
+                elif self.id != data['id']:  # not 1st login, different acc
+                    self.friends = data['friendlist']
+                    self.chatSessions = {}  # flush chat sessions
+                # print(self.friends)
+                # the final case is not 1st login, same acc -> do nothing
+
                 self.id = data['id']
                 self.nickname = data['nickname']
                 # adding gibberish to indicate success
@@ -77,7 +85,7 @@ class ClientProc():
             }
             # use main server socket
             lock.acquire()
-            self.cServer.send(json.dumps(msg).encode('utf-8'))
+            self.cServer.sendall(json.dumps(msg).encode('utf-8'))
             lock.release()
             # recv data
             lock.acquire()
@@ -86,6 +94,8 @@ class ClientProc():
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.SIGNUP_SUCCESS:
                 # set nickname
+                if self.id != -1: # not 1st time
+                   self.friends = []
                 self.id = data['id']
                 self.nickname = nickname
                 # adding gibberish to indicate success
@@ -97,7 +107,7 @@ class ClientProc():
         # format message to send
         msg = {'type': ReqTag.LOGOUT}
         lock.acquire()
-        self.cServer.send(json.dumps(msg).encode('utf-8'))
+        self.cServer.sendall(json.dumps(msg).encode('utf-8'))
         lock.release()
 
     def openSessionThread(self, peerID):
@@ -109,7 +119,7 @@ class ClientProc():
             'port': self.PORT
         }
         lock.acquire()
-        self.cServer.send(json.dumps(msg).encode('utf-8'))
+        self.cServer.sendall(json.dumps(msg).encode('utf-8'))
         lock.release()
     def sendChatThread(self, message, peerID):
         msg = {
@@ -121,7 +131,7 @@ class ClientProc():
         for friend in self.friends:
             if friend['id'] == peerID:
                 client.connect((friend['ip'], friend['port']))
-                client.send(json.dumps(msg).encode('utf-8'))
+                client.sendall(json.dumps(msg).encode('utf-8'))
                 client.close()
 
     def updateAddress(self, friendID, ip, port):
@@ -173,7 +183,7 @@ class ClientProc():
                             'type': RepTag.SESSION_REJECT,
                             'destID': data['id']
                         }
-                    self.cServer.send(json.dumps(msg).encode('utf-8'))
+                    self.cServer.sendall(json.dumps(msg).encode('utf-8'))
                 elif data['type'] == RepTag.SESSION_ACCEPT:
                     self.updateAddress(data['id'], data['ip'], data['port'])
                     # insert into 1st position of chat session

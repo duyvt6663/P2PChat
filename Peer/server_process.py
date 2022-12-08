@@ -36,6 +36,7 @@ class ServerProc:
             except:
                 return
             try:
+                # print(f'message: ${msg}')
                 if msg['type'] == RepData.MESSAGE:
                     peerMessage().load(msg)
                     client.chatSessions[msg['src']].append(msg['data'])

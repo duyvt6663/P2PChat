@@ -13,9 +13,16 @@ def getFriends(username, clients, lock):
     lock.release_read()
     res = []
     for friendID in users[id]['friends']:
+        # check if friend is online
+        status = 'OFFLINE'
+        if friendID in clients:
+            for conn in clients[friendID]:
+                if clients[friendID][conn] == 'ONLINE':
+                    status = 'ONLINE'
+                    break
         res.append({'id': friendID,
                     'nickname': users[friendID]['nickname'],
-                    'status': 'ONLINE' if friendID in clients else 'OFFLINE'})
+                    'status': status})
     return res
 
 def writeToStorage(new_data, lock, filename='Users.json'):

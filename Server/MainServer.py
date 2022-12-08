@@ -14,39 +14,46 @@ from Synchronization import ReadWriteLock
 ###################################################################
 ### Global asset, including lock, online users, and sessions
 lock = ReadWriteLock()
-clients = {} # online users, an ID can have multiple connection instances, e.g 1 : [conn1, conn2]
+clients = {} # online users, an ID can have multiple connection instances, e.g {1 : {conn1 : 'ONL', conn2: 'OFF'} }
 sessions = {} # current online chats
 with open('HMap.json', 'r') as file:
     hashmap = json.load(file)
 ###################################################################
 
 # broadcast status of a friend
-def updateStatus(id, type=RepTag.ONLINE):
+def updateStatus(id, conn, type=RepTag.ONLINE):
     lock.acquire_read()
     with open('Users.json', 'r') as openfile:
         users = json.load(openfile)
     lock.release_read()
     for friend in users[id]['friends']:
-        if friend in clients: # friend is online
-            for conn in clients[friend]: # all instances of a friend
-                conn.send(json.dumps({'type': type,
-                                      'friend': id}).encode('utf-8'))
+        if friend in clients:  # friend has connection to server
+            # broadcast to all online instance of friend
+            for con in clients[friend]:  # all instances of a friend
+                if clients[friend][con] == 'ONLINE':
+                    con.sendall(json.dumps({
+                        'type': type,
+                        'friend': id
+                    }).encode('utf-8'))
+    clients[id][conn] = 'ONLINE' if type == RepTag.ONLINE else 'OFFLINE'
 # broadcast status of a session
 def updateSession(srcID, destID,tag='COMPLETELY', type = ReqTag.SESSION_CLOSE):
     if srcID in clients:
         for conn in clients[srcID]:
-            conn.send(json.dumps({
-                'type': type,
-                'with': destID,
-                'status': tag
-            }).encode('utf-8'))
+            if clients[srcID][conn] == 'ONLINE':
+                conn.sendall(json.dumps({
+                    'type': type,
+                    'with': destID,
+                    'status': tag
+                }).encode('utf-8'))
     if destID in clients:
         for conn in clients[destID]:
-            conn.send(json.dumps({
-                'type': type,
-                'with': srcID,
-                'status': tag
-            }).encode('utf-8'))
+            if clients[destID][conn] == 'ONLINE':
+                conn.sendall(json.dumps({
+                    'type': type,
+                    'with': srcID,
+                    'status': tag
+                }).encode('utf-8'))
 
 # create session
 def createSession(addr,srcID,destID,tag=ReqTag.SESSION_OPEN):
@@ -60,12 +67,13 @@ def createSession(addr,srcID,destID,tag=ReqTag.SESSION_OPEN):
     incrementSession(srcID,destID)
     # session already exists
     for conn in clients[destID]:
-        conn.send(json.dumps({
-            'type': tag,
-            'id': srcID,
-            'ip': addr[0],
-            'port': addr[1]
-        }).encode('utf-8'))
+        if clients[destID][conn] == 'ONLINE':
+            conn.sendall(json.dumps({
+                'type': tag,
+                'id': srcID,
+                'ip': addr[0],
+                'port': addr[1]
+            }).encode('utf-8'))
 
 # add/subtract user from session
 def incrementSession(srcID, destID, unit=1):
@@ -98,37 +106,37 @@ def signup(conn, client):
     writeToStorage({
         'nickname': client['nickname'],
         'username': client['username'],
-        'password': client['password']
+        'password': client['password'],
+        'friends': []
     }, lock)
     msg = {'type': RepTag.SIGNUP_SUCCESS,
            'id': hashmap[client['username']],
            'friendlist': []}
-    conn.send(json.dumps(msg).encode('utf-8'))  # notify success
+    conn.sendall(json.dumps(msg).encode('utf-8'))  # notify success
 
 # post signup/login update
 def updateUser(conn, id):
     # add id to client list; can log in multiple instances simultaneously
     if id not in clients:
-        clients[id] = []
-    if conn not in clients[id]:
-        clients[id].append(conn)
+        clients[id] = {}
+    clients[id][conn] = 'ONLINE'
     # broadcast online status to online friends
-    updateStatus(id)
+    updateStatus(id, conn)
 
 # disconnect util function
 def disconnect(conn, id):
     # exception-free section -> no send
-    if id == -1: # no login, signup etc.
+    if id == -1:  # no login, signup etc.
         return
     # id valid
     # update status
-    clients[id].remove(conn)
-    if not len(clients[id]):
+    updateStatus(id, conn, RepTag.OFFLINE)
+    clients[id].pop(conn)
+    if not clients[id]:
         clients.pop(id)
         # close related sessions when no connection from the same id found
         for i in range(len(hashmap)):
             incrementSession(id, i, -1)
-    updateStatus(id, RepTag.OFFLINE)
 
 
 # peer handling function
@@ -139,7 +147,7 @@ def peerConnection(conn, addr):
         try:
             data = conn.recv(1024)
             data = json.loads(data.decode('utf-8'))
-        except:
+        except ConnectionResetError:
             disconnect(conn, id)
             print(f'Disconnected to: ', addr[0], ':', str(addr[1]))
             return
@@ -154,7 +162,7 @@ def peerConnection(conn, addr):
                 id = hashmap[data['username']]
                 lock.acquire_read()
                 with open('Users.json', 'r') as file:
-                    users = json.load(file) # read nickname in
+                    users = json.load(file)  # read nickname in
                 lock.release_read()
 
                 conn.send(json.dumps({
@@ -180,10 +188,10 @@ def peerConnection(conn, addr):
             elif data['type'] == ReqTag.SESSION_REJECT:
                 destID = BriefSessionSchema().load(data)['destID']
                 conn.send(json.dumps(data).encode('utf-8'))
-                updateSession(id,destID)
+                updateSession(id, destID)
                 # pop session
-                sessions.pop((destID,id))
-                sessions.pop((id,destID))
+                sessions.pop((destID, id))
+                sessions.pop((id, destID))
 
             elif data['type'] == ReqTag.SESSION_ACCEPT:
                 SessionSchema().load(data)
@@ -192,10 +200,10 @@ def peerConnection(conn, addr):
 
             elif data['type'] == ReqTag.SESSION_CLOSE:
                 destID = SessionSchema().load(data)['destID']
-                incrementSession(id,destID,-1)
+                incrementSession(id, destID, -1)
 
             elif data['type'] == ReqTag.LOGOUT: # logout, update status
-                updateStatus(id,RepTag.OFFLINE)
+                updateStatus(id, conn, RepTag.OFFLINE)
                 id = -1
 
             else:  # disconnect or gibberish data
