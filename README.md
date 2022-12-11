@@ -14,4 +14,6 @@ The main server keeps track of the users online, and the chat sessions. Each P2P
 * Uses threading to manage multiple peers on each P2P client.
 * Uses a concept called flooding to distribute messages along the network. 
 * Has logic to maintain integrity of network in case a peer leaves in order to maintain upkeep of Overlay network
+* Separate logics between client and server processes within a peer.
+* Has file transfer feature, by chopping up files into chunks and sending using specific format.
 
