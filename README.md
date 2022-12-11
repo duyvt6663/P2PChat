@@ -1,5 +1,5 @@
 # P2P-Chat
-A Peer-to-Peer chatting application created in Python as part of the COMP3234 - Computer and Communication Networks course in HKU.
+A Peer-to-Peer chatting application created in Python as part of the Computer Networks course in HCMUT.
 
 ## Server
 The room server keeps track of the chat rooms available, and the clients in each room. Each P2P client must regularly contact the room server to maintain the connection established initially (client must ping server every 20s to stay alive, or client will be disconnected).  
