@@ -94,7 +94,7 @@ class ClientProc():
             data = json.loads(data.decode('utf-8'))
             if data['type'] == RepTag.SIGNUP_SUCCESS:
                 # set nickname
-                if self.id != -1: # not 1st time
+                if self.id != -1:  # not 1st time
                    self.friends = []
                 self.id = data['id']
                 self.nickname = nickname
@@ -133,6 +133,35 @@ class ClientProc():
                 client.connect((friend['ip'], friend['port']))
                 client.sendall(json.dumps(msg).encode('utf-8'))
                 client.close()
+
+    def sendFileThread(self, friendID, file_path):
+        # send file
+        if (file_path and file_path != None and file_path != ''):
+            filename = file_path.split('/').pop()
+            # send the file
+            client = socket(AF_INET, SOCK_STREAM)
+            for friend in self.friends:
+                if friend['id'] == friendID:
+                    client.connect((friend['ip'], friend['port']))
+                    # chop the message into multiple parts and send
+                    file = open(file_path, 'rb')
+
+                    i = -1 # init offset
+                    line = ("0"*1025).encode('utf-8') # init a b string of length >= 900
+                    while len(line) >= 900: # cap at 900 bytes because json format takes extra bytes
+                        line = file.read(900)
+                        i = -1 if len(line) < 900 else i + 1
+                        msg = {
+                            'type': RepData.FILE,
+                            'src': self.id,
+                            'data': line.decode(),
+                            'offset': i,
+                            'name': filename
+                        }
+                        client.sendall(json.dumps(msg).encode('utf-8'))
+                        time.sleep(.1)
+                    print('file sent')
+                    client.close()
 
     def updateAddress(self, friendID, ip, port):
         for friend in self.friends:
@@ -201,64 +230,3 @@ class ClientProc():
                         self.chatSessions.pop(data['with'])
             except Exception as e:
                 print(repr(e))
-
-#   def is_account_exist(self, username):
-#     lock.acquire_read()
-#     with open('./Server/Users.json', 'r') as file:
-#         users = json.load(file)
-#     lock.release_read()
-#     for i in users:
-#         if users[i]['username'].__len__ > 0:
-#             return True
-#
-#     return False
-#
-# # signup a user
-# def sign_up_user(self, user):
-#     account = {
-#         "nickname": user['nickname'],
-#         "username": user['username'],
-#         "password": user['password']
-#     }
-#
-#     writeToStorage(lock, account);
-#
-# # retrieves the password for a given username
-# def get_password(self, nickname):
-#     lock.acquire_read()
-#     with open('./Server/Users.json', 'r') as file:
-#         users = json.load(file)
-#     lock.release_read()
-#
-#     for i in users:
-#         if users[i]['nickname'] == nickname:
-#             return users[i]['password']
-#
-# # checks if an account with the username online
-#
-# def is_account_online(self, nickname):
-#     if self.online_peers.find({"nickname": nickname}).count() > 0:
-#         return True
-#     else:
-#         return False
-#
-# # logs in the user
-#
-# def user_login(self, nickname, ip, port):
-#     active_peer = {
-#         "nickname": nickname,
-#         "ip": ip,
-#         "port": port
-#     }
-#     self.online_peers.update(active_peer);
-#
-# # logs out the user
-#
-# def user_logout(self, nickname):
-#     self.online_peers.pop({"nickname": nickname})
-#
-# # retrieves the ip address and the port number of the username
-#
-# def get_peer_ip_port(self, nickname):
-#     retrieve_peer = self.online_peers.find({"nickname": nickname})
-#     return (retrieve_peer["ip"], retrieve_peer["port"])

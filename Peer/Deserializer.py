@@ -1,6 +1,6 @@
 import json
 from enum import Enum
-from marshmallow import Schema, fields, validates, validates_schema, ValidationError, validate
+from marshmallow import Schema, fields, INCLUDE
 from marshmallow_enum import EnumField
 import pickle
 
@@ -24,9 +24,15 @@ class ReqTag(str,Enum): # request tag
 class RepData(str,Enum): # either message or file
     MESSAGE = 'MSG'
     FILE = 'FIL'
-class peerMessage(Schema):
+class fromPeer(Schema):
     type = EnumField(RepData, by_value=True)
     src = fields.Int(required=True)
     data = fields.Str(required=True)
+    class Meta:
+        unknown = INCLUDE
+
+class peerFile(fromPeer):
+    offset = fields.Int(required=True)
+    name = fields.Str(required=True)
     class Meta:
         strict=True

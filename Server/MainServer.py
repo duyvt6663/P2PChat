@@ -6,8 +6,7 @@ from _thread import *
 import threading
 from threading import Thread
 # import serializer
-from Deserializer import RequestSchema, ClientSchema, SignUpSchema, \
-    LoginAuthenSchema, SessionSchema, BriefSessionSchema, ReqTag, RepTag
+from Deserializer import *
 from utils import getFriends, writeToStorage
 from Synchronization import ReadWriteLock
 

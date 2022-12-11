@@ -5,24 +5,22 @@ import pickle
 import time
 from threading import Thread
 import random
+import os
 from os import listdir
 from tkinter import *
 from tkinter import messagebox
+from tkinter import filedialog
 from server_process import ServerProc
 from client_process import ClientProc
 from Deserializer import ReqTag, RepTag
 
 
 class GUI:
-    serverSocket = None
-    targetSocket = None
-    selfSocket = None
-    last_received_message = None
-
     def __init__(self, master):
         self.root = master  # init GUI tree
         self.chat_transcript_area = None
         self.enter_text_widget = None
+        self.friend_area = None
         self.frframe = None
         self.chatframe = None
         self.entryframe = None
@@ -136,9 +134,9 @@ class GUI:
         messagebox.showinfo('Message', 'Log in successfully!')
         self.hide_frame()
         self.display_logout_but()
+        self.display_chat_entry_box()
         self.display_friend_box()
         self.display_chat_box()
-        self.display_chat_entry_box()
 
     # ------------------------- SIGNUP GUI ------------------------------
     #####################################################################
@@ -197,9 +195,9 @@ class GUI:
         messagebox.showinfo('Message', 'Sign up successfully!')
         self.hide_frame()
         self.display_logout_but()
+        self.display_chat_entry_box()
         self.display_friend_box()
         self.display_chat_box()
-        self.display_chat_entry_box()
 
     # ------------------------- LOGOUT UI -------------------------------
     #####################################################################
@@ -220,13 +218,19 @@ class GUI:
     #####################################################################
     def display_friend_box(self):
         self.frframe = Frame()
-        Label(self.frframe, text='Friend List:', font=(
-            "Serif", 12)).pack(side='top', anchor='w')
+        # self.friendBox = Frame(self.frframe)
+
+        Label(self.frframe, text='Friend List:', font=("Serif", 12)).pack(side='top', anchor='w')
+
         self.friend_area = Frame(self.frframe, width=30, height=15)
-        scrollbar = Scrollbar(self.frframe, orient=VERTICAL)
         self.friend_area.pack(side='left', padx=10)
+
+        scrollbar = Scrollbar(self.frframe, orient=VERTICAL)
         scrollbar.pack(side='right', fill='y')
-        self.frframe.pack(side='left')
+
+        # self.friendBox.pack(side='top', anchor='s')
+        self.frframe.pack(side='left', anchor='n')
+
         self.currChatFriend = IntVar(self.friend_area, -1)
         for friend in self.client.friends:
             Radiobutton(self.friend_area, text=str((friend['nickname'], friend['status'])),
@@ -257,41 +261,57 @@ class GUI:
     #####################################################################
     def display_chat_entry_box(self, peerID=-1):
         self.entryframe = Frame()
-        Label(self.entryframe, text='Enter message:', font=(
-            "Serif", 12)).pack(side='top', anchor='w')
+        Label(self.entryframe, text='Enter message:', font=("Serif", 12))\
+            .pack(side='top', anchor='w',padx=(251,10),pady=(10,1))
+
+        self.fileButton = Button(self.entryframe, text='Browse', width=10, background='#8d99ae',
+                                 font=('Serif', 12), fg='white', cursor='hand2', state=DISABLED,
+                                 command=lambda: self.send_file(peerID))
+        self.fileButton.pack(side='left',anchor='e',padx=(145,10))
+
         self.enter_text_widget = Text(self.entryframe, width=60, height=3, font=("Serif", 12))
-        self.enter_text_widget.pack(side='left', pady=15)
+        self.enter_text_widget.pack(side='right',anchor='e', pady=(1,15))
+
         if peerID != -1:
             self.enter_text_widget.bind('<Return>', lambda e, peerID=peerID: self.on_enter_key_pressed(peerID))
-        self.entryframe.pack(side='top')
+            self.fileButton.config(state=ACTIVE)
+        self.entryframe.pack(side='bottom')
 
     def on_enter_key_pressed(self, peerID):
         self.send_chat(peerID)
-        self.clear_text()
-
-    def clear_text(self):
+        # clear text
         self.enter_text_widget.delete(1.0, 'end')
 
     def send_chat(self, peerID):
+        # add message to self chatbox
         senders_name = self.client.nickname.strip() + ": "
         data = self.enter_text_widget.get(1.0, 'end').strip()
-        # if data.split(' ')[0] == '\\file_transfer':
-        #     path = data.split(' ')[1]
-        #     self.file_transfer(conn, path)
-        #     msg = 'Ban da gui file cho ' + self.target + ' '
-        #     self.insertchatbox(msg)
-        #     self.chat_history[self.target] += [msg]
-        #     return 'break'
         msg = (senders_name + data)
         self.insertchatbox(msg)
         if peerID not in self.client.chatSessions:
             self.client.chatSessions[peerID] = [msg]
         else:
             self.client.chatSessions[peerID] += [msg]
-
+        # new thread to send message
         thread = Thread(target=ClientProc.sendChatThread, args=(self.client, msg, peerID), daemon=True)
         thread.start()
         self.enter_text_widget.delete(1.0, 'end')
+    def send_file(self, peerID):
+        file_path = filedialog.askopenfilename(initialdir=os.path.sep, title='Choose file')
+        filename = file_path.split('/').pop()
+        # add message to self chatbox
+        senders_name = self.client.nickname.strip() + ": "
+        data = 'SEND ' + filename
+        msg = (senders_name + data)
+        self.insertchatbox(msg)
+        if peerID not in self.client.chatSessions:
+            self.client.chatSessions[peerID] = [msg]
+        else:
+            self.client.chatSessions[peerID] += [msg]
+        # new thread to send the file
+        thread = Thread(target=ClientProc.sendFileThread, args=(self.client, peerID, file_path), daemon=True)
+        thread.start()
+
 
     # ------------------------- CHAT BOX UI -----------------------------
     #####################################################################
@@ -315,12 +335,15 @@ class GUI:
         self.chat_transcript_area.yview(END)
 
     def reset_chatbox(self, sessionID=-1):
+        if self.frframe:
+            self.frframe.pack_forget()
         if self.entryframe:
             self.entryframe.pack_forget()
         if self.chatframe:
             self.chatframe.pack_forget()
-        self.display_chat_box(sessionID)
         self.display_chat_entry_box(sessionID)
+        self.display_friend_box()
+        self.display_chat_box(sessionID)
 
     # ------------------------- CLOSE WINDOW UI -------------------------
     #####################################################################
@@ -329,8 +352,9 @@ class GUI:
             self.root.destroy()
             exit(0)
 
-    # ------------------------- FILE TRANSFER UI ------------------------
+    # ------------------------- UTILS -----------------------------------
     #####################################################################
+
 
     # def wait_connect(self, so, username):
     #     so.listen(5)
