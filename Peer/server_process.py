@@ -56,6 +56,10 @@ class ServerProc:
                 if not self.isFriend(client, msg['src']):
                     raise 'not friend'
                 if msg['type'] == RepData.MESSAGE:
+                    # change msg nickname if overlapping with current nickname
+                    nickname, content = msg['data'].split(':', 1)
+                    if nickname == client.nickname:
+                        msg['data'] = nickname + '*: ' + content
                     client.chatSessions[msg['src']].append(msg['data'])
                     # update on UI if currently chatting with this friend
                     if GUI.currChatFriend.get() == msg['src']:
@@ -94,10 +98,11 @@ class ServerProc:
 
                         for friend in client.friends:
                             if friend['id'] == msg['src']:
-                                chatdata = friend['nickname'] + ': SEND ' + filename
+                                pad = '' if friend['nickname'] != client.nickname else '*'
+                                chatdata = friend['nickname'] + pad + ': SEND ' + filename
+                                client.chatSessions[friend['id']] += [chatdata]
                                 if GUI.currChatFriend.get() == msg['src']:
                                     GUI.insertchatbox(chatdata)
-                                client.chatSessions[friend['id']] += [chatdata]
                     else:
                         buffer[msg['name']][msg['offset']] = msg['data']
             except Exception as e:

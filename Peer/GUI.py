@@ -216,8 +216,9 @@ class GUI:
 
     # ------------------------- friend box UI ---------------------------
     #####################################################################
-    def display_friend_box(self):
+    def display_friend_box(self, peerID=-1):
         self.frframe = Frame()
+        self.frframe.pack(side='left')
         # self.friendBox = Frame(self.frframe)
 
         Label(self.frframe, text='Friend List:', font=("Serif", 12)).pack(side='top', anchor='w')
@@ -229,9 +230,8 @@ class GUI:
         scrollbar.pack(side='right', fill='y')
 
         # self.friendBox.pack(side='top', anchor='s')
-        self.frframe.pack(side='left', anchor='n')
 
-        self.currChatFriend = IntVar(self.friend_area, -1)
+        self.currChatFriend = IntVar(self.friend_area, peerID)
         for friend in self.client.friends:
             Radiobutton(self.friend_area, text=str((friend['nickname'], friend['status'])),
                         variable=self.currChatFriend, value=friend['id'], width=30,
@@ -261,6 +261,7 @@ class GUI:
     #####################################################################
     def display_chat_entry_box(self, peerID=-1):
         self.entryframe = Frame()
+        self.entryframe.pack(side='bottom')
         Label(self.entryframe, text='Enter message:', font=("Serif", 12))\
             .pack(side='top', anchor='w',padx=(251,10),pady=(10,1))
 
@@ -275,7 +276,7 @@ class GUI:
         if peerID != -1:
             self.enter_text_widget.bind('<Return>', lambda e, peerID=peerID: self.on_enter_key_pressed(peerID))
             self.fileButton.config(state=ACTIVE)
-        self.entryframe.pack(side='bottom')
+
 
     def on_enter_key_pressed(self, peerID):
         self.send_chat(peerID)
@@ -284,7 +285,7 @@ class GUI:
 
     def send_chat(self, peerID):
         # add message to self chatbox
-        senders_name = self.client.nickname.strip() + ": "
+        senders_name = self.client.nickname.strip() + ":\n"
         data = self.enter_text_widget.get(1.0, 'end').strip()
         msg = (senders_name + data)
         self.insertchatbox(msg)
@@ -317,6 +318,8 @@ class GUI:
     #####################################################################
     def display_chat_box(self, sessionID=-1):
         self.chatframe = Frame()
+        self.chatframe.pack(side='top', anchor='e')
+
         Label(self.chatframe, text='Chat Box:', font=("Serif", 12)).pack(side='top', anchor='w')
         self.chat_transcript_area = Text(self.chatframe, width=60, height=10, font=("Serif", 12))
         scrollbar = Scrollbar(self.chatframe, command=self.chat_transcript_area.yview, orient=VERTICAL)
@@ -324,14 +327,25 @@ class GUI:
         self.chat_transcript_area.bind('<KeyPress>', lambda e: 'break')
         self.chat_transcript_area.pack(side='left', padx=10)
         scrollbar.pack(side='right', fill='y')
-        self.chatframe.pack(side='top')
+
 
         if sessionID != -1 and sessionID in self.client.chatSessions:
+            self.chat_transcript_area.tag_configure('center', justify='center')
+            self.chat_transcript_area.tag_configure('left', justify='left')
+            self.chat_transcript_area.tag_configure('right', justify='right')
             for msg in self.client.chatSessions[sessionID]:
                 self.insertchatbox(msg)
 
     def insertchatbox(self, msg):
-        self.chat_transcript_area.insert(END, msg + '\n')
+        # centered SESSION_INIT
+        if int(self.chat_transcript_area.index('end-1c').split('.')[0]) == 1:
+            tag = 'center'
+        # if the message belongs to self -> right, else left
+        elif msg.split(':')[0] == self.client.nickname:
+            tag = 'right'
+        else:
+            tag = 'left'
+        self.chat_transcript_area.insert(END, msg + '\n', tag)
         self.chat_transcript_area.yview(END)
 
     def reset_chatbox(self, sessionID=-1):
@@ -342,7 +356,7 @@ class GUI:
         if self.chatframe:
             self.chatframe.pack_forget()
         self.display_chat_entry_box(sessionID)
-        self.display_friend_box()
+        self.display_friend_box(sessionID)
         self.display_chat_box(sessionID)
 
     # ------------------------- CLOSE WINDOW UI -------------------------
@@ -354,118 +368,3 @@ class GUI:
 
     # ------------------------- UTILS -----------------------------------
     #####################################################################
-
-
-    # def wait_connect(self, so, username):
-    #     so.listen(5)
-    #     so.settimeout(120)
-    #     try:
-    #         conn, addr = so.accept()
-    #         self.peers[username] = conn
-    #         if username not in self.chat_history:
-    #             self.chat_history[username] = []
-    #         t = Thread(target=self.receive_message_from_peer,
-    #                    args=(username,), daemon=True)
-    #         t.start()
-    #     except:
-    #         return
-    # def accept_session(self, username, ip, port):
-    #     print(username, ip, port)
-    #     so = socket(AF_INET, SOCK_STREAM)
-    #     # try:
-    #     so.connect((ip, port))
-    #     self.peers[username] = so
-    #     if username not in self.chat_history:
-    #         self.chat_history[username] = []
-    #
-    #     t = Thread(target=self.receive_message_from_peer,
-    #                args=(username,), daemon=True)
-    #     t.start()
-    #     # except:
-    #     #     print('Không thể connect tới',username)
-
-    def recv(self, conn):
-        msg = b''
-        while True:
-            try:
-                buffer = conn.recv(1024)
-            except:
-                return None
-            msg += buffer
-            if len(buffer) < 1024:
-                break
-        return msg
-
-    # def receive_message_from_peer(self, username):
-    #     while True:
-    #         conn = self.peers[username]
-    #         # msg = self.recv(conn)
-    #         # if msg is None:
-    #         #     print('Disconnected to ',username)
-    #         #     return
-    #         msg = conn.recv(512)
-    #         header, args = pickle.loads(msg)
-    #         if header == self.MESSAGE:
-    #             message = args[1]
-    #             self.chat_history[username] += [message]
-    #             print(self.target)
-    #             if self.target == message.split(':')[0]:
-    #                 self.insertchatbox(message)
-    #
-    #         elif header == self.FILE_TRANSFER:
-    #             filename = args[0]
-    #             if filename in listdir(self.path):
-    #                 file = filename.split('.')
-    #                 i = 1
-    #                 filename_i = file[0] + '(' + str(i) + ')' + file[1]
-    #                 while filename_i in listdir(self.path):
-    #                     i = i + 1
-    #                     filename_i = file[0] + '(' + str(i) + ')' + file[1]
-    #                 filename = filename_i
-    #             file = open(self.path + '\\' + filename, 'wb')
-    #             file.write(args[1])
-    #             file.close()
-    #             msg = username + ' đã gửi cho bạn ' + filename
-    #             self.insertchatbox(msg)
-    #             self.chat_history[username] += [msg]
-
-    # def receive_message_from_server(self):
-    #     while True:
-    #         msg = self.recv(self.serverSocket)
-    #         if msg is None:
-    #             print('Mất kết nối với server')
-    #             break
-    #         header, args = pickle.loads(msg)
-    #         if header == self.FRIENDS_LIST:
-    #             self.client.friends = args[0]
-    #             self.update_friend_box()
-    #         elif header == self.REQUEST_CONNECTION:
-    #             op = args[0]
-    #             if messagebox.askokcancel("Connect request", "Request connection from "+op):
-    #                 self.target = op
-    #                 self.accept_session(*args)
-    #             else:
-    #                 print('reject kết nối từ', op)
-    #     self.serverSocket.close()
-
-    def file_transfer(self, conn, file_path):
-        file = open(file_path, 'rb')
-        n = file_path.split('\\')
-        filename = n[len(n)-1]
-        data = b''
-        while True:
-            line = file.read(1024)
-            data += line
-            if len(line) < 1024:
-                break
-        file.close()
-        msg = (self.FILE_TRANSFER, (filename, data))
-        self.sendMessage(conn, msg)
-
-
-    def clear_buffer(self, conn):
-        try:
-            while conn.recv(1024):
-                pass
-        except:
-            pass

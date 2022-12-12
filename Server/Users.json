@@ -41,12 +41,12 @@
         "nickname": "Jimpansy",
         "username": "hol",
         "password": "hol",
-        "friends": []
+        "friends": [5]
     },
     {
-        "nickname": "Tuskini",
+        "nickname": "Jimpansy",
         "username": "fanu",
         "password": "fanu",
-        "friends": []
+        "friends": [4]
     }
 ]
