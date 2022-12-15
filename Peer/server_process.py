@@ -9,6 +9,7 @@ from tkinter import *
 from tkinter import messagebox
 from Deserializer import *
 import json
+from client_process import ClientProc
 
 
 class ServerProc:
@@ -72,16 +73,18 @@ class ServerProc:
                         buffer[msg['name']][0] = msg['data']
                     elif msg['offset'] == -1:
                         # End of file -> flush buffer, write data
-                        keys = list(buffer[msg['name']].keys())
-                        if not self.isSufficient(keys):
-                            raise 'insufficient fragments'
+                        filename = msg['name']
                         if msg['name'] not in buffer:
                             fileData = msg['data']
                         else:
                             fileData = ''.join(list(buffer[msg['name']].values()))+msg['data']
-                        filename = msg['name']
-                        # clear buffer
-                        buffer.pop(filename)
+                            # check if there is sufficient fragments
+                            keys = list(buffer[msg['name']].keys())
+                            if not self.isSufficient(keys):
+                                raise 'insufficient fragments'
+                            # clear buffer
+                            buffer.pop(filename)
+
                         # Change file name if already existing
                         if msg['name'] in listdir(self.path):
                             i = 1  # new index for name
